@@ -1,0 +1,159 @@
+{% extends "Inicio/Base/base.html" %}
+
+{% block title %}Registrar Razón Social | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'consultar_razones' %}">Razones Sociales</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Registro Razon Social</li>
+{% endblock %}
+
+{% block page_content %}
+    <!-- 2. Formulario de Registro -->
+    <form method="post" id="formRazonSocial" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Tarjeta 1: Datos Generales e Identificación -->
+        <div class="card-corporate mb-4">
+            <div class="card-corporate-body p-4">
+                <h6 class="fw-bold text-dark mb-3 pb-2 border-bottom" style="font-size: 14px;">
+                    <i class="fas fa-building text-primary me-2"></i> Datos Generales
+                </h6>
+
+                <div class="row g-3">
+                    <div class="col-12 col-md-4 col-lg-3">
+                        <label class="form-label required fw-semibold" style="font-size: 13px;">{{ form.rfc.label }}</label>
+                        {{ form.rfc }}
+                    </div>
+                    <div class="col-12 col-md-8 col-lg-9">
+                        <label class="form-label required fw-semibold" style="font-size: 13px;">{{ form.razon_social.label }}</label>
+                        {{ form.razon_social }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta 2: Domicilio Fiscal -->
+        <div class="card-corporate mb-4">
+            <div class="card-corporate-body p-4">
+                <h6 class="fw-bold text-dark mb-3 pb-2 border-bottom" style="font-size: 14px;">
+                    <i class="fas fa-map-marker-alt text-primary me-2"></i> Domicilio Fiscal
+                </h6>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label class="form-label required fw-semibold" style="font-size: 13px;">{{ form.codigo_postal.label }}</label>
+                        {{ form.codigo_postal }}
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-5">
+                        <label class="form-label required fw-semibold" style="font-size: 13px;">{{ form.calle.label }}</label>
+                        {{ form.calle }}
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label required fw-semibold" style="font-size: 13px;">{{ form.num_ext.label }}</label>
+                        {{ form.num_ext }}
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fw-semibold" style="font-size: 13px;">{{ form.num_int.label }}</label>
+                        {{ form.num_int }}
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label required fw-semibold" style="font-size: 13px;">{{ form.colonia.label }}</label>
+                        {{ form.colonia }}
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold" style="font-size: 13px;">{{ form.localidad.label }}</label>
+                        {{ form.localidad }}
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label required fw-semibold" style="font-size: 13px;">{{ form.municipio.label }}</label>
+                        {{ form.municipio }}
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label required fw-semibold" style="font-size: 13px;">{{ form.estado.label }}</label>
+                        {{ form.estado }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta 3: Configuración Fiscal y Buzón -->
+        <div class="card-corporate mb-4">
+            <div class="card-corporate-body p-4">
+                <h6 class="fw-bold text-dark mb-3 pb-2 border-bottom" style="font-size: 14px;">
+                    <i class="fas fa-mail-bulk text-primary me-2"></i> Buzón y Régimen Fiscal
+                </h6>
+
+                <div class="row g-3">
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label fw-semibold" style="font-size: 13px;">{{ form.buzon_prefijo.label }}</label>
+                        <div class="input-group shadow-sm">
+                            <span class="input-group-text bg-light text-secondary" style="font-size: 13px;">grupopetro+</span>
+                            {{ form.buzon_prefijo }}
+                            <span class="input-group-text bg-light text-secondary" style="font-size: 13px;">@buzon.listo.mx</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label required fw-semibold" style="font-size: 13px;">{{ form.regimen_fiscal_principal.label }}</label>
+                        {{ form.regimen_fiscal_principal }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta 4: Certificados y Firma Electrónica (FIEL) -->
+        <div class="card-corporate mb-4">
+            <div class="card-corporate-body p-4">
+                <h6 class="fw-bold text-dark mb-3 pb-2 border-bottom" style="font-size: 14px;">
+                    <i class="fas fa-key text-primary me-2"></i> Certificados Digitales (FIEL)
+                </h6>
+
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label required fw-semibold" style="font-size: 13px;">Certificado (.cer):</label>
+                        <input type="file" name="certificado_cer" class="form-control form-control-sm" accept=".cer" required>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label required fw-semibold" style="font-size: 13px;">Clave privada (.key):</label>
+                        <input type="file" name="clave_privada_key" class="form-control form-control-sm" accept=".key" required>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label required fw-semibold" style="font-size: 13px;">Contraseña de la clave privada:</label>
+                        <input type="password" name="contrasena" class="form-control form-control-sm" placeholder="••••••••" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="d-flex align-items-center gap-2 mb-4">
+            <button type="submit" class="btn btn-primary-custom px-4 shadow-sm">
+                <i class="fas fa-save me-1"></i> Agregar Razón Social
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm px-3 shadow-sm" onclick="limpiarFormulario()">
+                <i class="fas fa-eraser me-1"></i> Limpiar
+            </button>
+        </div>
+        
+    </form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function limpiarFormulario() {
+        document.getElementById("formRazonSocial").reset();
+        const inputs = document.querySelectorAll('#formRazonSocial input, #formRazonSocial select');
+        inputs.forEach(input => {
+            if(input.type !== 'hidden' && input.type !== 'submit' && input.type !== 'button') {
+                input.value = '';
+            }
+        });
+    }
+</script>
+{% endblock %}

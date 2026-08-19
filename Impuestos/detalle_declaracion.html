@@ -1,0 +1,136 @@
+{% extends "Inicio/Base/base.html" %}
+
+{% block title %}Detalle de Declaración | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'impuestos' %}?empresa_id={{ declaracion.razon_social_id }}">Impuestos</a></li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'declaraciones_periodo' empresa_id=declaracion.razon_social_id anio=declaracion.anio mes=declaracion.mes|default:0 %}">
+            Declaracion {{ declaracion.periodo }} {{ declaracion.anio }}
+        </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">No. de Operación #{{ declaracion.numero_operacion }}</li>
+{% endblock %}
+
+{% block page_content %}
+
+    <!-- 1. Barra de Navegación y Acciones Superior -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        
+        <!-- Acciones del detalle -->
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            
+            <!-- Dropdown de Archivos -->
+            <div class="dropdown table-actions-dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-inline-flex align-items-center gap-1 shadow-sm px-3" 
+                        type="button" 
+                        data-bs-toggle="dropdown" 
+                        data-bs-boundary="viewport"
+                        data-bs-popper-config='{"strategy":"fixed"}'
+                        aria-expanded="false">
+                    <i class="far fa-folder-open"></i>
+                    <span>Archivos</span>
+                </button>
+                <ul class="dropdown-menu shadow border-0">
+                    {% if declaracion.archivo_hoja_trabajo_id %}
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2" 
+                               href="{% url 'ver_archivo_impuesto' archivo_id=declaracion.archivo_hoja_trabajo_id %}"
+                               onclick="activarSpinnerItem(this)">
+                                <i class="far fa-file-pdf text-danger fa-fw item-icon"></i> 
+                                <span>Hoja de trabajo</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if declaracion.archivo_acuse_id %}
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2" 
+                               href="{% url 'ver_archivo_impuesto' archivo_id=declaracion.archivo_acuse_id %}"
+                               onclick="activarSpinnerItem(this)">
+                                <i class="far fa-file-pdf text-danger fa-fw item-icon"></i> 
+                                <span>Acuse de recibo</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if declaracion.archivo_comprobante_pago_id %}
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2" 
+                               href="{% url 'ver_archivo_impuesto' archivo_id=declaracion.archivo_comprobante_pago_id %}"
+                               onclick="activarSpinnerItem(this)">
+                                <i class="far fa-file-pdf text-danger fa-fw item-icon"></i> 
+                                <span>Comprobante de pago</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if not declaracion.archivo_hoja_trabajo_id and not declaracion.archivo_acuse_id and not declaracion.archivo_comprobante_pago_id %}
+                        <li><span class="dropdown-item text-muted disabled">Sin archivos adjuntos</span></li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <!-- Acceso a todas las declaraciones del período -->
+            <a href="{% url 'declaraciones_periodo' empresa_id=declaracion.razon_social_id anio=declaracion.anio mes=declaracion.mes|default:0 %}" class="btn btn-light btn-sm border text-secondary d-inline-flex align-items-center gap-1 shadow-sm px-3">
+                <i class="far fa-calendar-alt text-primary"></i>
+                <span>Ver declaraciones del {{ declaracion.periodo }} {{ declaracion.anio }}</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 2. Matriz de Desglose de Impuestos -->
+    <div class="card-corporate mb-4">
+        <div class="card-corporate-body p-0">
+            <div class="table-responsive-custom">
+                <table class="table table-hover align-middle mb-0" style="min-width: 850px;">
+                    <thead>
+                        <tr>
+                            <th class="ps-3" style="min-width: 260px; width: 35%;">
+                                <i class="fas fa-calculator text-muted me-1"></i> Impuesto / Desglose
+                            </th>
+                            {% for g in grupos %}
+                                <th class="text-end pe-3" style="min-width: 140px;">
+                                    {{ g.descripcion_corta }}
+                                </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in desglose %}
+                            <tr class="{% if r.orden == 4 or r.orden == 8 or r.orden == 12 or r.orden == 13 %}row-subtotal{% endif %}">
+                                
+                                <!-- Concepto de Desglose -->
+                                <td class="ps-3 text-dark">
+                                    {{ r.impuesto_desglose }}
+                                </td>
+
+                                <!-- Columnas por Grupo de Impuesto -->
+                                {% for celda in r.celdas %}
+                                    <td class="text-end pe-3">
+                                        {% if r.orden == 4 and celda.grupo_impuesto == "IVA" and celda.importe and celda.importe < 0 %}
+                                            <a href="{% url 'saldos_favor' empresa_id=declaracion.razon_social_id %}?declaracion_id={{ declaracion.impuesto_declaracion_id }}&impuesto=IVA" class="badge-interactive" title="Ver saldo a favor"> 
+                                                {{ celda.importe_fmt }}
+                                            </a>
+                                        {% else %}
+                                            <span class="{% if celda.importe and celda.importe < 0 %}text-danger fw-semibold{% elif r.orden == 4 or r.orden == 8 or r.orden == 12 or r.orden == 13 %}text-dark fw-bold{% else %}text-secondary{% endif %}">
+                                                {{ celda.importe_fmt }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="{{ grupos|length|add:'1'|default:'10' }}" class="text-center text-muted py-5">
+                                    <div class="d-flex flex-column align-items-center justify-content-center gap-2">
+                                        <i class="fas fa-folder-open fa-2x text-secondary opacity-50"></i>
+                                        <span>No existe desglose registrado para esta declaración.</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

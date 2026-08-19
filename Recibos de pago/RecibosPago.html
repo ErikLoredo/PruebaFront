@@ -1,0 +1,572 @@
+{% extends "Inicio/Base/base.html" %}
+
+{% block title %}Recibos de Pago | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Recibos de Pago</li>
+{% endblock %}
+
+{% block extra_css %}
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block page_content %}
+
+    <!-- 1. Barra de Herramientas y Exportación Superior -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        
+        <!-- Dropdown RFCs -->
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle shadow-sm" data-bs-toggle="dropdown">
+                <i class="fas fa-building me-1"></i> Todos los RFCs
+            </button>
+            <div class="dropdown-menu p-2 shadow" style="max-height: 380px; overflow-y: auto; font-size: 13px;">
+                <a class="dropdown-item py-1" href="?{% if serie_seleccionada %}serie={{ serie_seleccionada }}&{% endif %}{% if tipo_actual %}tipo={{ tipo_actual }}{% endif %}">
+                    Todos los RFCs
+                </a>
+                <hr class="dropdown-divider">
+                {% for rs in razones_sociales_disponibles %}
+                    <a class="dropdown-item py-1" href="?razon_social={{ rs.id }}{% if serie_seleccionada %}&serie={{ serie_seleccionada }}{% endif %}{% if tipo_actual %}&tipo={{ tipo_actual }}{% endif %}">
+                        {{ rs.razon_social }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Dropdown Tipo de Comprobante -->
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle shadow-sm" data-bs-toggle="dropdown">
+                {% if tipo_comprobante_actual == 'P' %}
+                    <i class="fas fa-receipt me-1"></i> Recibos de Pago
+                {% else %}
+                    <i class="fas fa-money-bill-wave me-1"></i> Pagos Individuales
+                {% endif %}
+            </button>
+            <div class="dropdown-menu p-2 shadow" style="font-size: 13px;">
+                <a class="dropdown-item py-1 {% if tipo_comprobante_actual == 'P' %}active{% endif %}" href="?tipo_comprobante=P">
+                    Recibos de Pago
+                </a>
+                <a class="dropdown-item py-1 {% if tipo_comprobante_actual != 'P' %}active{% endif %}" href="?tipo_comprobante=I">
+                    Pagos Individuales
+                </a>
+            </div>
+        </div>
+
+        <!-- Dropdown Exportar Excel -->
+        <div class="dropdown">
+            <button class="btn btn-outline-success btn-sm dropdown-toggle shadow-sm" data-bs-toggle="dropdown" id="btnExportar">
+                <i class="far fa-file-excel me-1"></i> Excel
+                <span class="spinner-border spinner-border-sm d-none" id="loaderExportar" role="status" aria-hidden="true"></span>
+            </button>
+            <div class="dropdown-menu p-2 shadow" style="min-width: 250px; font-size: 13px;">
+                <a class="dropdown-item py-1" href="{% url 'exportar_detalle_pagos_pago' %}?excluir_canceladas=false{% if request.GET.razon_social_id %}&razon_social_id={{ request.GET.razon_social_id }}{% endif %}{% if request.GET.folio %}&folio={{ request.GET.folio }}{% endif %}{% if request.GET.fecha %}&fecha={{ request.GET.fecha }}{% endif %}" onclick="descargarExcelloader2()">
+                    Detalle de pagos (incl. canceladas)
+                </a>
+                <a class="dropdown-item py-1" href="{% url 'exportar_detalle_pagos_pago' %}?excluir_canceladas=true{% if request.GET.razon_social_id %}&razon_social_id={{ request.GET.razon_social_id }}{% endif %}{% if request.GET.folio %}&folio={{ request.GET.folio }}{% endif %}{% if request.GET.fecha %}&fecha={{ request.GET.fecha }}{% endif %}" onclick="descargarExcelloader2()">
+                    Detalle de pagos (excl. canceladas)
+                </a>
+                <hr class="dropdown-divider">
+                <a class="dropdown-item py-1 text-muted" href="#">Recibos de pago faltantes</a>
+            </div>
+        </div>
+
+        <!-- Dropdown XMLs -->
+        <div class="dropdown">
+            <button class="btn btn-outline-primary btn-sm dropdown-toggle shadow-sm" data-bs-toggle="dropdown">
+                <i class="far fa-file-code me-1"></i> XML
+            </button>
+            <div class="dropdown-menu p-2 shadow" style="font-size: 13px;">
+                {% url 'descargar_recibos_pago_xml' as url_xml %}
+                <a class="dropdown-item py-1" href="javascript:void(0);" onclick="iniciarDescargaConLoader2('{{ url_xml }}?{{ request.GET.urlencode }}')">
+                    Descargar XMLs
+                </a>
+            </div>
+        </div>
+
+        <!-- Dropdown PDFs -->
+        <div class="dropdown">
+            <button class="btn btn-outline-danger btn-sm dropdown-toggle shadow-sm" data-bs-toggle="dropdown">
+                <i class="far fa-file-pdf me-1"></i> PDF
+            </button>
+            <div class="dropdown-menu p-2 shadow" style="min-width: 250px; font-size: 13px;">
+                {% url 'descargar_recibos_pago_pdf_masivo' as url_pdf_masivo %}
+                <a class="dropdown-item py-1" href="javascript:void(0);" onclick="iniciarDescargaConLoader2('{{ url_pdf_masivo }}?{{ request.GET.urlencode }}&excluir_canceladas=false')">
+                    Recibos visibles (incl. canceladas)
+                </a>
+                <a class="dropdown-item py-1" href="javascript:void(0);" onclick="iniciarDescargaConLoader2('{{ url_pdf_masivo }}?{{ request.GET.urlencode }}&excluir_canceladas=true')">
+                    Recibos visibles (excl. canceladas)
+                </a>
+            </div>
+        </div>
+
+        <!-- Botón Generar Recibo -->
+        <button class="btn btn-outline-secondary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalReciboPago">
+            <i class="fas fa-plus me-1"></i> Generar recibo de pago
+        </button>
+
+    </div>
+
+    <!-- 2. Barra de Búsqueda y Paginador -->
+    <div class="card-corporate mb-3">
+        <div class="card-corporate-body p-3">
+            <form method="GET" action="{% url 'recibos-pago' %}" class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                
+                <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+                    <input type="text" name="q" class="filter-control flex-grow-1" style="min-width: 220px; max-width: 380px;" placeholder="Buscar en recibos..." value="{{ request.GET.q }}">
+
+                    {% if request.GET.fecha %}<input type="hidden" name="fecha" value="{{ request.GET.fecha }}">{% endif %}
+                    {% if request.GET.serie %}<input type="hidden" name="serie" value="{{ request.GET.serie }}">{% endif %}
+                    {% if request.GET.folio %}<input type="hidden" name="folio" value="{{ request.GET.folio }}">{% endif %}
+                    {% if request.GET.tipo %}<input type="hidden" name="tipo" value="{{ request.GET.tipo }}">{% endif %}
+
+                    <button type="submit" class="filter-apply">
+                        <i class="fas fa-search me-1"></i> Buscar
+                    </button>
+
+                    <a href="{% url 'recibos-pago' %}" class="filter-clear-btn">
+                        <i class="fas fa-undo-alt me-1"></i> Quitar filtros
+                    </a>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <label for="page_size" class="form-label mb-0 text-secondary" style="font-size: 13px;">Mostrar:</label>
+                    <select id="page_size" name="page_size" class="form-select form-select-sm filter-select" style="width: 90px; min-width: 90px;" onchange="this.form.submit()">
+                        <option value="50" {% if request.GET.page_size == "50" or not request.GET.page_size %}selected{% endif %}>50</option>
+                        <option value="100" {% if request.GET.page_size == "100" %}selected{% endif %}>100</option>
+                        <option value="200" {% if request.GET.page_size == "200" %}selected{% endif %}>200</option>
+                        <option value="500" {% if request.GET.page_size == "500" %}selected{% endif %}>500</option>
+                    </select>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. Metadatos de Registro y Loader de Descarga -->
+    <div class="d-flex align-items-center justify-content-between mb-2 text-secondary" style="font-size: 13px;">
+        <span>Mostrando <strong>{{ totales.total_pagina }}</strong> de <strong>{{ totales.total_filtrado }}</strong> recibos de pago</span>
+    </div>
+
+    <div id="loading-container" class="card-corporate p-3 mb-3 text-center" style="display: none; background-color: var(--color-orange-50); border-color: var(--color-orange-200);">
+        <div class="d-flex align-items-center justify-content-center gap-2">
+            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            <span class="fw-semibold text-dark" style="font-size: 13px;">Generando archivo... por favor espera.</span>
+        </div>
+    </div>
+
+    <!-- 4. Tabla Principal de Recibos de Pago -->
+    <div class="card-corporate mb-3">
+        <div class="card-corporate-body p-0">
+            <div class="table-responsive-custom table-sticky-header" style="max-height: calc(100vh - 280px); min-height: 520px; overflow-y: auto;">
+                <table class="table table-hover align-middle mb-0 table-fixed-layout" style="min-width: 1100px;">
+                    <thead>
+                        <tr style="height: 52px;">
+                            <th style="width: 40px;" class="ps-3 text-center"></th>
+                            
+                            <!-- FECHA -->
+                            <th style="width: 150px;">
+                                <div class="dropdown">
+                                    <a href="#" class="text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">Fecha</a>
+                                    <div class="dropdown-menu p-3 shadow" style="width: 260px; font-size: 13px;">
+                                        <div class="mb-2">
+                                            <label class="form-label small mb-1 text-muted">Rango de fechas:</label>
+                                            <input type="text" id="filtroFecha" class="form-control form-control-sm" placeholder="Selecciona rango..." value="{{ request.GET.fecha }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <!-- TIPO -->
+                            <th style="width: 100px;">
+                                <div class="dropdown">
+                                    <a href="#" class="text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">Tipo</a>
+                                    <div class="dropdown-menu p-2 shadow" style="font-size: 13px;">
+                                        <a class="dropdown-item py-1 px-2 rounded {% if not request.GET.tipo %}active{% endif %}" 
+                                           href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.fecha %}fecha={{ request.GET.fecha }}&{% endif %}{% if request.GET.serie %}serie={{ request.GET.serie }}&{% endif %}{% if request.GET.folio %}folio={{ request.GET.folio }}&{% endif %}{% if request.GET.page_size %}page_size={{ request.GET.page_size }}{% endif %}">
+                                            Todos
+                                        </a>
+                                        <a class="dropdown-item py-1 px-2 rounded {% if request.GET.tipo == 'Ingreso' %}active{% endif %}" 
+                                           href="?tipo=Ingreso{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.fecha %}&fecha={{ request.GET.fecha }}{% endif %}{% if request.GET.serie %}&serie={{ request.GET.serie }}{% endif %}{% if request.GET.folio %}&folio={{ request.GET.folio }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
+                                            Ingresos
+                                        </a>
+                                        <a class="dropdown-item py-1 px-2 rounded {% if request.GET.tipo == 'Gasto' %}active{% endif %}" 
+                                           href="?tipo=Gasto{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.fecha %}&fecha={{ request.GET.fecha }}{% endif %}{% if request.GET.serie %}&serie={{ request.GET.serie }}{% endif %}{% if request.GET.folio %}&folio={{ request.GET.folio }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
+                                            Gastos
+                                        </a>
+                                    </div>
+                                </div>
+                            </th>
+                            
+                            <!-- SERIE -->
+                            <th style="width: 100px;">
+                                <div class="dropdown">
+                                    <a href="#" class="text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">Serie</a>
+                                    <div class="dropdown-menu p-2 shadow" style="width: 220px; font-size: 13px;">
+                                        <input type="text" id="busquedaSerie" class="form-control form-control-sm mb-2" placeholder="Buscar..." onkeyup="filtrarSeriesDropdown(this)">
+                                        <div style="max-height: 200px; overflow-y: auto;" id="listaSeriesContainer">
+                                            <a class="dropdown-item py-1 px-2 rounded {% if not request.GET.serie or request.GET.serie == 'Todos(as)' %}active{% endif %}" 
+                                               href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.fecha %}fecha={{ request.GET.fecha }}&{% endif %}{% if request.GET.folio %}folio={{ request.GET.folio }}&{% endif %}{% if request.GET.tipo %}tipo={{ request.GET.tipo }}&{% endif %}{% if request.GET.page_size %}page_size={{ request.GET.page_size }}{% endif %}">
+                                                <strong>Todos(as)</strong>
+                                            </a>
+                                            {% for s in series_disponibles %}
+                                                <a class="dropdown-item py-1 px-2 rounded item-serie {% if request.GET.serie == s.serie %}active{% endif %}" 
+                                                   href="?serie={{ s.serie }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.fecha %}&fecha={{ request.GET.fecha }}{% endif %}{% if request.GET.folio %}&folio={{ request.GET.folio }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
+                                                    {{ s.serie|default:"Sin serie" }} <span class="text-muted small">({{ s.total }})</span>
+                                                </a>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <!-- FOLIO -->
+                            <th style="width: 110px;">
+                                <div class="dropdown">
+                                    <a href="#" class="text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">Folio</a>
+                                    <div class="dropdown-menu p-2 shadow" style="width: 260px; font-size: 13px;">
+                                        <form id="formFiltroFolio" method="GET" action="{% url 'recibos-pago' %}" class="d-flex flex-column gap-2 m-0">
+                                            <input type="text" name="folio" class="form-control form-control-sm" placeholder="Folio ej. 123" value="{{ request.GET.folio }}">
+                                            
+                                            {% if request.GET.q %}<input type="hidden" name="q" value="{{ request.GET.q }}">{% endif %}
+                                            {% if request.GET.serie %}<input type="hidden" name="serie" value="{{ request.GET.serie }}">{% endif %}
+                                            {% if request.GET.fecha %}<input type="hidden" name="fecha" value="{{ request.GET.fecha }}">{% endif %}
+                                            {% if request.GET.tipo %}<input type="hidden" name="tipo" value="{{ request.GET.tipo }}">{% endif %}
+                                            {% if request.GET.page_size %}<input type="hidden" name="page_size" value="{{ request.GET.page_size }}">{% endif %}
+                                            
+                                            <div class="d-flex gap-2">
+                                                <button type="submit" class="btn btn-sm btn-primary flex-grow-1">Aplicar</button>
+                                                <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.serie %}serie={{ request.GET.serie }}&{% endif %}{% if request.GET.fecha %}fecha={{ request.GET.fecha }}&{% endif %}{% if request.GET.tipo %}tipo={{ request.GET.tipo }}&{% endif %}{% if request.GET.page_size %}page_size={{ request.GET.page_size }}{% endif %}" class="btn btn-sm btn-outline-secondary flex-grow-1">Todos</a>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <th style="width: 40px;"></th>
+
+                            <!-- RAZON SOCIAL -->
+                            <th style="width: 32%;">
+                                <div class="dropdown">
+                                    <a href="#" class="text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">Razón social</a>
+                                    <ul class="dropdown-menu p-2 shadow" style="width: 250px; font-size: 13px;">
+                                        <li><input class="form-control form-control-sm mb-2" placeholder="Buscar..."></li>
+                                        <li><a class="dropdown-item py-1" href="#">Todas</a></li>
+                                    </ul>
+                                </div>
+                            </th>
+
+                            <!-- ESTADO -->
+                            <th style="width: 100px;">
+                                <div class="dropdown">
+                                    <a href="#" class="text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">Estado</a>
+                                    <ul class="dropdown-menu p-2 shadow" style="font-size: 13px;">
+                                        <li><a class="dropdown-item py-1" href="#">Vigente</a></li>
+                                    </ul>
+                                </div>
+                            </th>
+
+                            <!-- FECHA CANCELACIÓN -->
+                            <th style="width: 120px;">
+                                <div class="dropdown">
+                                    <a href="#" class="text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">Fecha cancel.</a>
+                                    <div class="dropdown-menu p-2 shadow" style="font-size: 13px;">
+                                        <input type="date" class="form-control form-control-sm">
+                                    </div>
+                                </div>
+                            </th>
+
+                            <!-- TOTAL -->
+                            <th style="width: 120px;" class="text-end pe-3">
+                                <span>Total</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for recibo in recibos_pago %}
+                        <tr style="height: 48px;">
+                            <td class="ps-3 text-center"></td>
+                            <td class="text-muted fecha-es">{{ recibo.fecha|default:"—" }}</td>
+                            <td>
+                                <span class="badge {% if recibo.tipo == 'Ingreso' %}bg-success-subtle text-success{% else %}bg-secondary-subtle text-secondary{% endif %}" style="font-size: 11px;">
+                                    {{ recibo.tipo }}
+                                </span>
+                            </td>
+                            <td class="font-monospace text-secondary">{{ recibo.serie|default:"-" }}</td>
+                            <td class="font-monospace text-dark fw-semibold">{{ recibo.folio|default:"-" }}</td>
+                            <td></td>
+                            <td class="fw-semibold text-truncate">
+                                <a href="{% url 'recibo_simplificado' recibo.id %}" class="text-decoration-none text-dark" onclick="activarSpinnerLink(this)">
+                                    {{ recibo.emisor_nombre }}
+                                </a>
+                            </td>
+                            <td><span class="badge bg-light text-secondary border">Vigente</span></td>
+                            <td class="text-muted">—</td>
+                            <td class="text-end pe-3 font-monospace fw-bold text-dark">
+                                ${{ recibo.pagos_totales_monto_total_pagos|floatformat:2 }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <i class="fas fa-receipt fa-2x text-secondary opacity-50 mb-2"></i>
+                                <div>No se encontraron recibos de pago con los filtros seleccionados.</div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Paginación Estandarizada -->
+    <div class="d-flex justify-content-center align-items-center mt-3 gap-2">
+        {% if page_obj.has_previous %}
+            <a class="filter-clear-btn" 
+               href="?page={{ page_obj.previous_page_number }}&page_size={{ request.GET.page_size|default:'50' }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.serie %}&serie={{ request.GET.serie }}{% endif %}{% if request.GET.fecha %}&fecha={{ request.GET.fecha }}{% endif %}{% if request.GET.folio %}&folio={{ request.GET.folio }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}">
+                <i class="fas fa-chevron-left me-1"></i> Anterior
+            </a>
+        {% endif %}
+
+        <span class="mx-3 text-secondary fw-semibold" style="font-size: 13px;">
+            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+        </span>
+
+        {% if page_obj.has_next %}
+            <a class="filter-clear-btn" 
+               href="?page={{ page_obj.next_page_number }}&page_size={{ request.GET.page_size|default:'50' }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.serie %}&serie={{ request.GET.serie }}{% endif %}{% if request.GET.fecha %}&fecha={{ request.GET.fecha }}{% endif %}{% if request.GET.folio %}&folio={{ request.GET.folio }}{% endif %}{% if request.GET.tipo %}&tipo={{ request.GET.tipo }}{% endif %}">
+                Siguiente <i class="fas fa-chevron-right ms-1"></i>
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- ==========================================
+         MODAL CREAR RECIBO DE PAGO
+         ========================================== -->
+    <div class="modal fade" id="modalReciboPago" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered"> 
+            <div class="modal-content shadow">
+                <div class="modal-header py-3">
+                    <h5 class="modal-title fw-bold" style="font-size: 15px;">Crear recibo de pago</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body p-3"> 
+                    <div class="form-group mb-2"> 
+                        <label class="form-label required">Emisor</label>
+                        <select class="form-select form-select-sm">
+                            <option>PROYECTOS Y SERVICIOS VALTOCA SA DE CV</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-2"> 
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label required">RFC receptor</label>
+                            <input class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label required">Razón social receptor</label>
+                            <input class="form-control form-control-sm">
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-2"> 
+                        <div class="col-6 col-sm-2">
+                            <label class="form-label">Serie</label>
+                            <input class="form-control form-control-sm">
+                        </div>
+                        <div class="col-6 col-sm-2">
+                            <label class="form-label">Folio</label>
+                            <input class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 col-sm-4">
+                            <label class="form-label required">CP receptor</label>
+                            <input class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 col-sm-4">
+                            <label class="form-label required">Régimen receptor</label>
+                            <select class="form-select form-select-sm"></select>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-2"> 
+                        <div class="col-12 col-sm-3">
+                            <label class="form-label required">CP expedición</label>
+                            <input class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 col-sm-3">
+                            <label class="form-label required">Fecha emisión</label>
+                            <select class="form-select form-select-sm"><option>22 Jun</option></select>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label">Comentarios <small class="text-muted">(opcional)</small></label>
+                            <input class="form-control form-control-sm">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Sustitución CFDI <small class="text-muted">(opcional)</small></label>
+                        <input class="form-control form-control-sm">
+                    </div>
+
+                    <div class="border-top pt-3">
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm">Depósitos</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm">Pagos</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm">Facturas</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm">Buscar</button>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-1">
+                            <i class="fas fa-plus me-1"></i> Agregar pago
+                        </button>
+                    </div>
+                </div>
+
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm">Vista previa PDF</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary-custom btn-sm px-3">Continuar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Flatpickr JS & Spanish locale -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+
+<script>
+function filtrarSeriesDropdown(input) {
+    let filtro = input.value.toLowerCase();
+    let items = document.querySelectorAll('#listaSeriesContainer .item-serie');
+    
+    items.forEach(item => {
+        let texto = item.textContent.toLowerCase();
+        item.style.display = texto.includes(filtro) ? "" : "none";
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const inputFecha = document.getElementById('filtroFecha');
+    if (inputFecha) {
+        const fp = flatpickr(inputFecha, {
+            mode: "range",
+            dateFormat: "Y-m-d",
+            locale: "es",
+            altInput: true,
+            altFormat: "d/m/Y",
+            altInputClass: "form-control form-control-sm",
+            closeOnSelect: false,
+            onReady: function(selectedDates, dateStr, instance) {
+                const calendarContainer = instance.calendarContainer;
+                
+                if (!calendarContainer.querySelector('.flatpickr-custom-footer')) {
+                    const footer = document.createElement('div');
+                    footer.className = 'flatpickr-custom-footer d-flex gap-2 p-2 border-top bg-light';
+                    footer.innerHTML = `
+                        <button type="button" class="btn btn-primary btn-sm w-50" id="fpConsultar">Consultar</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm w-50" id="fpLimpiar">Limpiar</button>
+                    `;
+                    calendarContainer.appendChild(footer);
+
+                    footer.querySelector('#fpConsultar').addEventListener('click', function() {
+                        aplicarFiltroFecha();
+                        fp.close();
+                    });
+
+                    footer.querySelector('#fpLimpiar').addEventListener('click', function() {
+                        limpiarFiltroFecha();
+                        fp.close();
+                    });
+                }
+            },
+            onChange: function(selectedDates, dateStr, instance) {
+                inputFecha.value = dateStr;
+            }
+        });
+    }
+
+    let inputBusqueda = document.getElementById('busquedaSerie');
+    if (inputBusqueda) {
+        inputBusqueda.addEventListener('click', function (e) {
+            e.stopPropagation();
+        });
+    }
+    
+    let formFolio = document.getElementById('formFiltroFolio');
+    if (formFolio) {
+        formFolio.addEventListener('click', function (e) {
+            e.stopPropagation();
+        });
+    }
+
+    document.querySelectorAll('.dropdown-menu').forEach(function(menu) {
+        menu.addEventListener('click', function (e) {
+            e.stopPropagation();
+        });
+    });
+});
+
+function aplicarFiltroFecha() {
+    const inputFecha = document.getElementById('filtroFecha');
+    let valFecha = inputFecha.value;
+    if (!valFecha && inputFecha && inputFecha._flatpickr) {
+        valFecha = inputFecha._flatpickr.input.value;
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (valFecha) {
+        urlParams.set('fecha', valFecha);
+    } else {
+        urlParams.delete('fecha');
+    }
+    window.location.href = `${window.location.pathname}?${urlParams.toString()}`;
+}
+
+function limpiarFiltroFecha() {
+    const inputFecha = document.getElementById('filtroFecha');
+    if (inputFecha && inputFecha._flatpickr) {
+        inputFecha._flatpickr.clear();
+    }
+    if (inputFecha) inputFecha.value = '';
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.delete('fecha');
+    window.location.href = `${window.location.pathname}?${urlParams.toString()}`;
+}
+
+function iniciarDescargaConLoader2(urlDescarga) {
+    const loaderContainer = document.getElementById('loading-container');
+    if (loaderContainer) loaderContainer.style.display = 'block';
+
+    document.cookie = "fileDownloaded=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    window.location.href = urlDescarga;
+
+    const checkDownload = setInterval(function () {
+        if (document.cookie.indexOf('fileDownloaded=true') !== -1) {
+            clearInterval(checkDownload);
+            if (loaderContainer) loaderContainer.style.display = 'none';
+        }
+    }, 500);
+}
+
+function descargarExcelloader2(urlDescarga) {
+    const loaderContainer = document.getElementById('loading-container');
+    if (loaderContainer) loaderContainer.style.display = 'block';
+
+    document.cookie = "excelFacturasDescargado=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    window.location.href = urlDescarga;
+
+    const checkDownload = setInterval(function () {
+        if (document.cookie.indexOf('excelFacturasDescargado=true') !== -1) {
+            clearInterval(checkDownload);
+            if (loaderContainer) loaderContainer.style.display = 'none';
+        }
+    }, 200);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,216 @@
+{% extends 'Inicio/Base/base.html' %}
+
+{% block title %}Detalle de Retención | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'retenciones' %}">Retenciones</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ retencion.folio_interno|default:"Retención" }}</li>
+{% endblock %}
+
+{% block page_content %}
+
+    <!-- 2. Cabecera de la Entidad y Badge Calendario -->
+    <div class="card-corporate mb-4">
+        <div class="card-corporate-body p-4">
+            <div class="row align-items-center g-3">
+                <div class="col-12 col-md-8">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge {% if participacion.tipo_operacion == 'GASTO' %}bg-secondary-subtle text-secondary{% else %}bg-success-subtle text-success{% endif %}" style="font-size: 11px;">
+                            {{ participacion.tipo_operacion|title }}
+                        </span>
+                        {% if retencion.estado_comprobante == "CANCELADO" %}
+                            <span class="badge bg-danger-subtle text-danger" style="font-size: 11px;">Cancelada</span>
+                        {% else %}
+                            <span class="badge bg-success-subtle text-success" style="font-size: 11px;">Vigente</span>
+                        {% endif %}
+                    </div>
+
+                    <h4 class="fw-bold text-dark mb-1" style="font-size: 1.25rem;">
+                        {{ participacion.contraparte_razon_social }}
+                    </h4>
+                    <div class="text-secondary mb-2" style="font-size: 13px;">
+                        <span class="fw-semibold">RFC:</span> <span class="font-monospace">{{ participacion.contraparte_rfc|default:"—" }}</span>
+                    </div>
+
+                    <div class="border-top pt-2 mt-2 text-muted" style="font-size: 13px;">
+                        <span>Expedido por: </span>
+                        <strong class="text-dark">{{ participacion.razon_social.razon_social }}</strong>
+                        <span class="ms-1 font-monospace">({{ participacion.rfc_corporativo }})</span>
+                    </div>
+                </div>
+
+                <!-- Bloque Calendario de Expedición -->
+                <div class="col-12 col-md-4 text-md-end text-start">
+                    <div class="card-corporate d-inline-block text-center p-2 mb-0 shadow-sm" style="min-width: 140px; background-color: var(--color-bg-subtle);">
+                        <small class="text-muted d-block fw-bold" style="font-size: 11px; letter-spacing: 0.5px;">
+                            {{ retencion.folio_interno|default:"SIN FOLIO" }}
+                        </small>
+                        <div class="border-top border-bottom my-1 py-1 bg-white rounded-1">
+                            <span class="text-uppercase text-primary d-block fw-bold" style="font-size: 11px;">
+                                {{ retencion.fecha_expedicion|date:"M"|upper }}
+                            </span>
+                            <span class="fs-4 fw-bold text-dark d-block" style="line-height: 1.1;">
+                                {{ retencion.fecha_expedicion|date:"d" }}
+                            </span>
+                            <span class="text-muted d-block" style="font-size: 11px;">
+                                {{ retencion.fecha_expedicion|date:"Y" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Estructura de 2 Columnas -->
+    <div class="row g-4 mb-4">
+        
+        <!-- Columna Izquierda: Tabla Desglose de Impuestos y Totales -->
+        <div class="col-12 col-lg-8 col-xl-9">
+            
+            <div class="card-corporate mb-4">
+                <div class="card-corporate-body p-0">
+                    <div class="table-responsive-custom">
+                        <table class="table table-hover align-middle mb-0" style="min-width: 650px;">
+                            <thead>
+                                <tr>
+                                    <th class="ps-3">Tipo</th>
+                                    <th>Impuesto</th>
+                                    <th class="text-end">Base retención</th>
+                                    <th class="text-end pe-3">Monto retenido</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for impuesto in impuestos %}
+                                    <tr>
+                                        <td class="ps-3">
+                                            <div class="fw-semibold text-dark">{{ impuesto.tipo }}</div>
+                                            {% if impuesto.tipo_pago_descripcion %}
+                                                <small class="text-muted" style="font-size: 11px;">{{ impuesto.tipo_pago_descripcion }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="text-dark">{{ impuesto.impuesto }}</div>
+                                            {% if impuesto.impuesto_codigo %}
+                                                <small class="text-muted font-monospace" style="font-size: 11px;">Clave: {{ impuesto.impuesto_codigo }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end text-secondary fw-semibold font-monospace">
+                                            {% if impuesto.base_retencion is not None %}
+                                                ${{ impuesto.base_retencion|floatformat:"2g" }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end pe-3 font-monospace fw-bold text-dark">
+                                            ${{ impuesto.monto_retenido|floatformat:"2g" }}
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4 text-muted">
+                                            No se encontraron impuestos retenidos.
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Total Retenido -->
+            <div class="row justify-content-end mb-4">
+                <div class="col-12 col-md-6 col-lg-5">
+                    <div class="card-corporate">
+                        <div class="card-corporate-body p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-dark" style="font-size: 15px;">Total retenido</span>
+                                <span class="fw-bold text-dark font-monospace" style="font-size: 15px;">${{ retencion.monto_total_retenido|floatformat:"2g" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Acordeón Más Detalles -->
+            <div class="mb-4">
+                <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 shadow-sm"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#retencionInformacionAdicional"
+                        aria-expanded="false"
+                        aria-controls="retencionInformacionAdicional">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Más detalles fiscales</span>
+                    <i class="fas fa-chevron-down ms-1" style="font-size: 11px;"></i>
+                </button>
+
+                <div id="retencionInformacionAdicional" class="collapse mt-2">
+                    <div class="card-corporate p-3 mb-0">
+                        <div class="row g-3" style="font-size: 13px;">
+                            <div class="col-12 col-md-6">
+                                <div class="mb-2"><span class="text-secondary">Tipo de retención:</span> <strong class="text-dark">{{ retencion.clave_retencion }}{% if retencion.descripcion_retencion %} — {{ retencion.descripcion_retencion }}{% endif %}</strong></div>
+                                <div class="mb-2"><span class="text-secondary">UUID:</span> <strong class="text-dark font-monospace">{{ retencion.uuid }}</strong></div>
+                                <div class="mb-2"><span class="text-secondary">Versión CFDI:</span> <strong class="text-dark">{{ retencion.version }}</strong></div>
+                                <div class="mb-2"><span class="text-secondary">Lugar de expedición:</span> <strong class="text-dark">{{ retencion.lugar_expedicion|default:"—" }}</strong></div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="mb-2">
+                                    <span class="text-secondary">Periodo:</span> 
+                                    <strong class="text-dark">
+                                        {% if retencion.mes_inicial == retencion.mes_final %}
+                                            {{ mes_inicial }} {{ retencion.ejercicio }}
+                                        {% else %}
+                                            {{ mes_inicial }}–{{ mes_final }} {{ retencion.ejercicio }}
+                                        {% endif %}
+                                    </strong>
+                                </div>
+                                <div class="mb-2"><span class="text-secondary">Fecha timbrado:</span> <strong class="text-dark">{{ retencion.fecha_timbrado|date:"d/m/Y H:i" }}</strong></div>
+                                <div class="mb-2">
+                                    <span class="text-secondary">Totales operación:</span> 
+                                    <strong class="text-dark font-monospace">${{ retencion.monto_total_operacion|floatformat:"2g" }} total</strong>
+                                    <div class="text-muted small">(${% if retencion.monto_total_gravado %}{{ retencion.monto_total_gravado|floatformat:"2g" }}{% else %}0.00{% endif %} gravado / ${% if retencion.monto_total_exento %}{{ retencion.monto_total_exento|floatformat:"2g" }}{% else %}0.00{% endif %} exento)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Columna Derecha: Tarjeta de Archivos -->
+        <div class="col-12 col-lg-4 col-xl-3">
+            <div class="card-corporate mb-4">
+                <div class="card-corporate-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold text-muted text-uppercase mb-0" style="font-size: 11px; letter-spacing: 0.5px;">Archivos</h6>
+                        <span class="badge {% if archivo_xml_disponible %}bg-success-subtle text-success border border-success-subtle{% else %}bg-secondary-subtle text-secondary border border-secondary-subtle{% endif %}" style="font-size: 11px;">
+                            {% if archivo_xml_disponible %}Disponible{% else %}No disponible{% endif %}
+                        </span>
+                    </div>
+                    <hr class="mt-1 mb-3">
+
+                    <p class="text-muted text-truncate font-monospace mb-3" style="font-size: 11px;" title="{{ nombre_xml }}">
+                        <i class="far fa-file-code me-1 text-primary"></i> {{ nombre_xml }}
+                    </p>
+
+                    {% if archivo_xml_disponible %}
+                        <div class="d-flex flex-column gap-2">
+                            <a class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-between p-2 shadow-sm text-decoration-none" href="{% url 'retencion_xml_descargar' participacion.id %}">
+                                <span class="d-inline-flex align-items-center gap-2">
+                                    <i class="fas fa-download text-success"></i>
+                                    <span style="font-size: 12px;">Descargar XML</span>
+                                </span>
+                                <span class="badge bg-light text-dark border">XML</span>
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+{% endblock %}

@@ -1,0 +1,1629 @@
+{% extends "Inicio/Base/base.html" %}
+
+{% block title %}Facturas | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Facturas</li>
+{% endblock %}
+
+{% block extra_css %}
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block page_content %}
+
+<!-- 1. Barra de Herramientas y Acciones Superiores -->
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    
+    <!-- Dropdown RFCs -->
+    <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle shadow-sm" data-bs-toggle="dropdown">
+            <i class="fas fa-building me-1"></i> Todos los RFCs
+        </button>
+        <div class="dropdown-menu p-2 shadow" style="max-height: 400px; overflow-y: auto; font-size: 13px;">
+            <a class="dropdown-item py-1" href="?{% if request.GET.q %}q={{ request.GET.q }}{% endif %}{% if request.GET.emisor %}&emisor={{ request.GET.emisor }}{% endif %}">Todos</a>
+            <hr class="dropdown-divider">
+            {% for empresa in lista_rfcs %}
+                <a class="dropdown-item py-1" href="?razon_social_id={{ empresa.id }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.emisor %}&emisor={{ request.GET.emisor }}{% endif %}">
+                    {{ empresa.razon_social }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Botón Captura Manual -->
+    <button class="btn btn-outline-secondary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCapturaManual">
+        <i class="fas fa-plus me-1"></i> Agregar comprobante
+    </button>
+
+    <!-- Dropdown Exportar Excel -->
+    <div class="dropdown excel-dropdown">
+        <button class="btn btn-outline-success btn-sm dropdown-toggle shadow-sm" data-bs-toggle="dropdown">
+            <i class="far fa-file-excel me-1"></i> Excel
+        </button>
+        <div class="dropdown-menu p-2 shadow" style="min-width: 250px; font-size: 13px;">
+            <a class="dropdown-item py-1" href="{% url 'exportar_facturas_excel' %}?{{ request.GET.urlencode }}&excluir_canceladas=false" onclick="descargarExcelloader(this.href); return false;">
+                Facturas visibles (incl. canceladas)
+            </a>
+            <a class="dropdown-item py-1" href="{% url 'exportar_facturas_excel' %}?{{ request.GET.urlencode }}&excluir_canceladas=true" onclick="descargarExcelloader(this.href); return false;">
+                Facturas visibles (excl. canceladas)
+            </a>
+            
+            <div class="dropend">
+                <a class="dropdown-item dropdown-toggle py-1" href="#" id="submenuPersonalizados" data-bs-toggle="dropdown">Personalizados</a>
+                <div class="dropdown-menu p-2 shadow" id="lista-reportes-personalizados">
+                    <div id="divisor-container">
+                        <hr class="dropdown-divider" id="divisor-reportes" style="display: none;">
+                    </div>
+                    <a class="dropdown-item py-1" href="#" data-bs-toggle="modal" data-bs-target="#modalReportePersonalizado" onclick="prepararNuevoReporte()">
+                        <i class="fas fa-plus-circle me-1 text-primary"></i> Crear nuevo reporte...
+                    </a>
+                </div>
+            </div>
+
+            {% url "exportar_detalle_conceptos_excel" as url_conceptos %}
+            <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_conceptos }}?{{ request.GET.urlencode }}&excluir_canceladas=false'); return false;">
+                Detalle de conceptos (incl. canceladas)
+            </a>
+            <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_conceptos }}?{{ request.GET.urlencode }}&excluir_canceladas=true'); return false;">
+                Detalle de conceptos (excl. canceladas)
+            </a>
+
+            {% url "exportar_detalle_pagos_excel" as url_pagos %}
+            <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_pagos }}?{{ request.GET.urlencode }}'); return false;">
+                Detalle de pagos
+            </a>
+
+            {% url 'exportar_reporte_iva' as url_iva %}
+            <div class="dropend">
+                {% if request.GET.razon_social_id %}
+                    <a class="dropdown-item dropdown-toggle py-1" href="#">Reporte del IVA</a>
+                    <div class="dropdown-menu p-2 shadow">
+                        {% with anos="2026 2025 2024 2023 2022 2021 2020 2019 2018" %}
+                        {% for anio in anos.split %}
+                        <div class="dropend">
+                            <a class="dropdown-item dropdown-toggle py-1" href="#">{{ anio }}</a>
+                            <div class="dropdown-menu p-2 shadow">
+                                {% if anio == "2026" %}
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=8'); return false;">Agosto</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=7'); return false;">Julio</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=6'); return false;">Junio</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=5'); return false;">Mayo</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=4'); return false;">Abril</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=3'); return false;">Marzo</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=2'); return false;">Febrero</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=1'); return false;">Enero</a>
+                                {% else %}
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=12'); return false;">Diciembre</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=11'); return false;">Noviembre</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=10'); return false;">Octubre</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=9'); return false;">Septiembre</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=8'); return false;">Agosto</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=7'); return false;">Julio</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=6'); return false;">Junio</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=5'); return false;">Mayo</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=4'); return false;">Abril</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=3'); return false;">Marzo</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=2'); return false;">Febrero</a>
+                                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_iva }}?{{ request.GET.urlencode }}&anio={{ anio }}&mes=1'); return false;">Enero</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% endwith %}
+                    </div>
+                {% else %}
+                    <a class="dropdown-item disabled text-muted py-1" href="#" tabindex="-1" aria-disabled="true">
+                        Reporte del IVA (seleccione un RFC)
+                    </a>
+                {% endif %}
+            </div>
+
+            {% url 'exportar_nomina_excel' as url_nomina %}
+            <div class="dropend">
+                <a class="dropdown-item dropdown-toggle py-1" href="#">Nómina</a>
+                <div class="dropdown-menu p-2 shadow">
+                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_nomina }}?{{ request.GET.urlencode }}&clave=sat&version=original&canceladas=false'); return false;">Por clave SAT, excl. canceladas</a>
+                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_nomina }}?{{ request.GET.urlencode }}&clave=interna&version=original&canceladas=false'); return false;">Por clave interna, excl. canceladas</a>
+                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_nomina }}?{{ request.GET.urlencode }}&clave=sat&version=1.1&canceladas=false'); return false;">Por clave SAT, version 1.1 excl. canceladas</a>
+                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_nomina }}?{{ request.GET.urlencode }}&clave=interna&version=1.1&canceladas=false'); return false;">Por clave interna, version 1.1 excl. canceladas</a>
+                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_nomina }}?{{ request.GET.urlencode }}&clave=sat&version=original&canceladas=true'); return false;">Por clave SAT, incl. canceladas</a>
+                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_nomina }}?{{ request.GET.urlencode }}&clave=interna&version=original&canceladas=true'); return false;">Por clave interna, incl. canceladas</a>
+                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_nomina }}?{{ request.GET.urlencode }}&clave=sat&version=1.1&canceladas=true'); return false;">Por clave SAT, version 1.1 incl. canceladas</a>
+                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_nomina }}?{{ request.GET.urlencode }}&clave=interna&version=1.1&canceladas=true'); return false;">Por clave interna, version 1.1 incl. canceladas</a>
+                </div>
+            </div>
+
+            {% url 'exportar_listas_negras_sat' as url_listas %}
+            <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_listas }}?{{ request.GET.urlencode }}'); return false;">Listas negras del SAT</a>
+
+            {% url 'exportar_formato_facturacion' as url_formato_fact %}
+            {% url 'exportar_formato_pagos' as url_formato_pagos %}
+            <div class="dropend">
+                <a class="dropdown-item dropdown-toggle py-1" href="#">Formatos</a>
+                <div class="dropdown-menu p-2 shadow">
+                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_formato_fact }}?{{ request.GET.urlencode }}'); return false;">Formato facturación masiva (últimos 90 días)</a>
+                    <a class="dropdown-item py-1" href="#" onclick="descargarExcelloader('{{ url_formato_pagos }}?{{ request.GET.urlencode }}'); return false;">Formato carga masiva de pagos</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dropdown XML -->
+    <div class="dropdown">
+        <button class="btn btn-outline-primary btn-sm dropdown-toggle shadow-sm" data-bs-toggle="dropdown">
+            <i class="far fa-file-code me-1"></i> XML
+        </button>
+        <div class="dropdown-menu p-2 shadow" style="font-size: 13px;">
+            <a class="dropdown-item py-1" href="#" id="btn-incluir-canceladas">Facturas visibles (incl. canceladas)</a>
+            <a class="dropdown-item py-1" href="#" id="btn-excluir-canceladas">Facturas visibles (excl. canceladas)</a>
+        </div>
+    </div>
+
+    <!-- Dropdown PDF -->
+    <div class="dropdown">
+        <button class="btn btn-outline-danger btn-sm dropdown-toggle shadow-sm" data-bs-toggle="dropdown">
+            <i class="far fa-file-pdf me-1"></i> PDF
+        </button>
+        <div class="dropdown-menu p-2 shadow" style="font-size: 13px;">
+            <a class="dropdown-item py-1" href="{% url 'descargar_pdfs_masivo' %}?{{ request.GET.urlencode }}&excluir_canceladas=false" onclick="iniciarDescargaConLoader(this.href); return false;">
+                Facturas visibles (incl. canceladas)
+            </a>
+            <a class="dropdown-item py-1" href="{% url 'descargar_pdfs_masivo' %}?{{ request.GET.urlencode }}&excluir_canceladas=true" onclick="iniciarDescargaConLoader(this.href); return false;">
+                Facturas visibles (excl. canceladas)
+            </a>
+        </div>
+    </div>
+
+    <!-- Dropdown Pagos -->
+    <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle shadow-sm" data-bs-toggle="dropdown">
+            <i class="fas fa-credit-card me-1"></i> Pagos
+        </button>
+        <div class="dropdown-menu p-2 shadow" style="font-size: 13px;">
+            <a class="dropdown-item py-1" href="{% url 'registro_masivo_pagos' %}">Carga masiva de pagos</a>
+        </div>
+    </div>
+
+</div>
+
+<!-- 2. Formulario de Búsqueda y Paginación -->
+<div class="card-corporate mb-3">
+    <div class="card-corporate-body p-3">
+        <form method="GET" action="{% url 'facturas' %}" class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            
+            <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+                <input type="text" name="q" class="filter-control flex-grow-1" style="min-width: 220px; max-width: 380px;" placeholder="Buscar en facturas..." value="{{ request.GET.q }}">
+
+                {% if request.GET.emisor %}<input type="hidden" name="emisor" value="{{ request.GET.emisor }}">{% endif %}
+                {% if request.GET.rubro %}<input type="hidden" name="rubro" value="{{ request.GET.rubro }}">{% endif %}
+                {% if request.GET.folio %}<input type="hidden" name="folio" value="{{ request.GET.folio }}">{% endif %}
+                {% if request.GET.fecha %}<input type="hidden" name="fecha" value="{{ request.GET.fecha }}">{% endif %}
+                {% if request.GET.estado %}<input type="hidden" name="estado" value="{{ request.GET.estado }}">{% endif %}
+                {% if request.GET.subtotal %}<input type="hidden" name="subtotal" value="{{ request.GET.subtotal }}">{% endif %}
+                {% if request.GET.total %}<input type="hidden" name="total" value="{{ request.GET.total }}">{% endif %}
+                {% if request.GET.rfc %}<input type="hidden" name="rfc" value="{{ request.GET.rfc }}">{% endif %}
+                {% if request.GET.razon_social_id %}<input type="hidden" name="razon_social_id" value="{{ request.GET.razon_social_id }}">{% endif %}
+
+                <button type="submit" class="filter-apply">
+                    <i class="fas fa-search me-1"></i> Buscar
+                </button>
+
+                <a href="{% url 'facturas' %}" class="filter-clear-btn">
+                    <i class="fas fa-undo-alt me-1"></i> Quitar filtros
+                </a>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 ms-auto">
+                <label for="page_size" class="form-label mb-0 text-secondary" style="font-size: 13px;">Mostrar:</label>
+                <select id="page_size" name="page_size" class="form-select form-select-sm filter-select" style="width: 90px; min-width: 90px;" onchange="this.form.submit()">
+                    <option value="50" {% if request.GET.page_size == "50" or not request.GET.page_size %} selected {% endif %}>50</option>
+                    <option value="100" {% if request.GET.page_size == "100" %}selected{% endif %}>100</option>
+                    <option value="200" {% if request.GET.page_size == "200" %}selected{% endif %}>200</option>
+                    <option value="500" {% if request.GET.page_size == "500" %}selected{% endif %}>500</option>
+                </select>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- 3. Totales y Contadores -->
+<div id="contenedor-totales" class="d-flex flex-wrap align-items-center gap-2 mb-2 text-secondary" style="font-size: 13px;">
+    <span id="contador-seleccionado" class="d-none badge bg-light text-dark border px-2 py-1"></span>
+    <span id="separador-totales" class="d-none text-muted">|</span>
+    <span id="totales-derechos" class="fw-semibold">
+        Mostrando {{ totales.total_pagina }} de {{ totales.total_filtrado }} facturas | 
+        Subtotal: ${{ totales.suma_subtotal|floatformat:2 }} | 
+        Total: ${{ totales.suma_total|floatformat:2 }}
+    </span>
+</div>
+
+<!-- Loader de descarga con cookie -->
+<div id="loading-container" class="card-corporate p-3 mb-3 text-center" style="display: none; background-color: var(--color-orange-50); border-color: var(--color-orange-200);">
+    <div class="d-flex align-items-center justify-content-center gap-2">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        <span class="fw-semibold text-dark" style="font-size: 13px;">Generando archivo... por favor espera.</span>
+    </div>
+</div>
+
+<!-- 4. Tabla de Facturas -->
+<div class="card-corporate mb-3">
+    <div class="card-corporate-body p-0">
+        <div class="table-responsive-custom table-sticky-header" style="max-height: calc(100vh - 280px); min-height: 520px; overflow-y: auto;">
+            <table class="table table-hover align-middle mb-0 table-fixed-layout" id="tabla-facturas" style="min-width: 1100px;">
+                <thead>
+                    <tr style="height: 52px;">
+                        <th class="ps-3" style="width: 42px;"></th>
+                        
+                        <!-- Razón social -->
+                        <th style="width: 27%;">
+                            <div class="dropdown">
+                                <a href="#" class="text-dark text-decoration-none dropdown-toggle d-inline-flex align-items-center gap-1" data-bs-toggle="dropdown">
+                                    <span>Razón social</span>
+                                </a>
+                                <ul class="dropdown-menu p-2 shadow" style="width: 280px; max-height: 400px; overflow-y: auto; font-size: 13px;">
+                                    <li>
+                                        <div class="px-2 pb-2">
+                                            <input type="text" id="inputBusquedaEmisor" class="form-control form-control-sm" placeholder="Buscar razón social...">
+                                        </div>
+                                        <a class="dropdown-item small py-1" href="?{% if request.GET.q %}q={{ request.GET.q }}{% endif %}">
+                                            Todas las razones sociales
+                                        </a>
+                                        <hr class="dropdown-divider">
+                                        <div id="lista-emisores">
+                                            {% for emisor in lista_emisores %}
+                                            <div class="dropdown-item py-1 item-razon" onclick="aplicarFiltrosMultiples()">
+                                                <input type="checkbox" class="me-2 emisor-check form-check-input" value="{{ emisor }}" 
+                                                    {% if emisor in request.GET.emisor %}checked{% endif %}> 
+                                                <span class="texto-razon small">{{ emisor }}</span>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        <!-- RUBRO -->
+                        <th style="width: 10%;">
+                            <div class="dropdown">
+                                <a href="#" class="text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                    Rubro
+                                </a>
+                                <ul class="dropdown-menu p-3 shadow" style="min-width: 240px; font-size: 13px;">
+                                    <li>
+                                        <a class="dropdown-item fw-bold px-2 py-1 text-dark" href="#" id="filtro-rubro-todos">
+                                            Todos los rubros
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <label class="dropdown-item d-flex align-items-center px-2 py-1" style="cursor: pointer;">
+                                            <input type="checkbox" class="form-check-input me-2 rubro-check" value="INGRESO" {% if "INGRESO" in request.GET.rubro %}checked{% endif %}>
+                                            <span>INGRESO</span>
+                                        </label>
+                                    </li>
+                                    <li>
+                                        <label class="dropdown-item d-flex align-items-center px-2 py-1" style="cursor: pointer;">
+                                            <input type="checkbox" class="form-check-input me-2 rubro-check" value="EGRESO" {% if "EGRESO" in request.GET.rubro %}checked{% endif %}>
+                                            <span>EGRESO</span>
+                                        </label>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        <!-- FOLIO -->
+                        <th style="width: 11%;">
+                            <div class="dropdown">
+                                <a href="#" class="text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                    Folio
+                                </a>
+                                <ul class="dropdown-menu p-3 shadow" style="width: 260px; font-size: 13px;">
+                                    <li>
+                                        <div class="mb-2">
+                                            <input type="text" id="inputBusquedaFolio" class="form-control form-control-sm" placeholder="Buscar folio...">
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-primary flex-grow-1" id="btn-aplicar-folio">Aplicar</button>
+                                            <button class="btn btn-sm btn-outline-secondary flex-grow-1" id="btn-mostrar-todos-folio">Todos</button>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        <!-- Fecha -->
+                        <th style="width: 10%;">
+                            <div class="dropdown">
+                                <a href="#" class="text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                                    Fecha
+                                </a>
+                                <div class="dropdown-menu p-3 shadow" style="min-width: 220px; font-size: 13px;">
+                                    <div class="mb-2">
+                                        <input type="date" id="filtroFecha" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" id="btnConsultarFecha" class="btn btn-sm btn-primary w-100">Consultar</button>
+                                        <button type="button" id="btnLimpiarFecha" class="btn btn-sm btn-outline-secondary w-100">Limpiar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </th>
+
+                        <!-- Vence -->
+                        <th style="width: 10%;">
+                            <div class="dropdown">
+                                <a href="#" class="text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                                    Vence
+                                </a>
+                                <div class="dropdown-menu p-3 shadow" style="min-width: 220px; font-size: 13px;">
+                                    <div class="mb-2">
+                                        <input type="date" id="filtroFechaVence" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" id="btnConsultarFechaVence" class="btn btn-sm btn-primary w-100">Consultar</button>
+                                        <button type="button" id="btnLimpiarFechaVence" class="btn btn-sm btn-outline-secondary w-100">Limpiar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </th>
+
+                        <!-- ESTADO -->
+                        <th style="width: 13%;">
+                            <div class="dropdown">
+                                <a href="#" class="text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                    Estado
+                                </a>
+                                <ul class="dropdown-menu p-3 shadow" style="min-width: 260px; font-size: 13px;">
+                                    <li>
+                                        <a class="dropdown-item fw-bold px-2 py-1 text-dark" href="#" id="filtro-estado-todos">
+                                            Todos los estados
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <label class="dropdown-item d-flex align-items-center px-2 py-1" style="cursor: pointer;">
+                                            <input type="checkbox" class="form-check-input me-2 estado-check" value="Por cobrar / pagar" {% if "Por cobrar / pagar" in request.GET.estado %}checked{% endif %}>
+                                            <span>Por cobrar / pagar</span>
+                                        </label>
+                                    </li>
+                                    <li>
+                                        <label class="dropdown-item d-flex align-items-center px-2 py-1" style="cursor: pointer;">
+                                            <input type="checkbox" class="form-check-input me-2 estado-check" value="Pagadas / cobradas (completo)" {% if "Pagadas / cobradas (completo)" in request.GET.estado %}checked{% endif %}>
+                                            <span>Pagadas / cobradas (completo)</span>
+                                        </label>
+                                    </li>
+                                    <li>
+                                        <label class="dropdown-item d-flex align-items-center px-2 py-1" style="cursor: pointer;">
+                                            <input type="checkbox" class="form-check-input me-2 estado-check" value="Pagadas / cobradas (parcial)" {% if "Pagadas / cobradas (parcial)" in request.GET.estado %}checked{% endif %}>
+                                            <span>Pagadas / cobradas (parcial)</span>
+                                        </label>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        <!-- Subtotal -->
+                        <th class="text-end" style="width: 10%;">
+                            <div class="dropdown">
+                                <a href="#" class="text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                                    Subtotal
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-end p-3 shadow" style="min-width: 220px; font-size: 13px;">
+                                    <a href="#" id="filtro-subtotal-todos" class="text-decoration-none text-muted small d-block mb-2">Todos los montos</a>
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input subtotal-check" type="checkbox" value="1000000-Infinity" id="subtotal_1m">
+                                        <label class="form-check-label small" for="subtotal_1m">Mayor a $1,000,000</label>
+                                    </div>
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input subtotal-check" type="checkbox" value="100000-1000000" id="subtotal_100k_1m">
+                                        <label class="form-check-label small" for="subtotal_100k_1m">$100,000 a $1,000,000</label>
+                                    </div>
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input subtotal-check" type="checkbox" value="10000-100000" id="subtotal_10k_100k">
+                                        <label class="form-check-label small" for="subtotal_10k_100k">$10,000 a $100,000</label>
+                                    </div>
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input subtotal-check" type="checkbox" value="1000-10000" id="subtotal_1k_10k">
+                                        <label class="form-check-label small" for="subtotal_1k_10k">$1,000 a $10,000</label>
+                                    </div>
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input subtotal-check" type="checkbox" value="100-1000" id="subtotal_100_1k">
+                                        <label class="form-check-label small" for="subtotal_100_1k">$100 a $1,000</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input subtotal-check" type="checkbox" value="0-100" id="subtotal_100_less">
+                                        <label class="form-check-label small" for="subtotal_100_less">Menor a $100</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </th>
+
+                        <!-- Total -->
+                        <th class="text-end pe-3" style="width: 10%;">
+                            <div class="dropdown">
+                                <a href="#" class="text-dark text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                                    Total
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-end p-3 shadow" style="min-width: 220px; font-size: 13px;">
+                                    <a href="#" id="filtro-total-todos" class="text-decoration-none text-muted small d-block mb-2">Todos los montos</a>
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input total-check" type="checkbox" value="1000000-Infinity" id="total_1m">
+                                        <label class="form-check-label small" for="total_1m">Mayor a $1,000,000</label>
+                                    </div>
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input total-check" type="checkbox" value="100000-1000000" id="total_100k_1m">
+                                        <label class="form-check-label small" for="total_100k_1m">$100,000 a $1,000,000</label>
+                                    </div>
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input total-check" type="checkbox" value="10000-100000" id="total_10k_100k">
+                                        <label class="form-check-label small" for="total_10k_100k">$10,000 a $100,000</label>
+                                    </div>
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input total-check" type="checkbox" value="1000-10000" id="total_1k_10k">
+                                        <label class="form-check-label small" for="total_1k_10k">$1,000 a $10,000</label>
+                                    </div>
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input total-check" type="checkbox" value="100-1000" id="total_100_1k">
+                                        <label class="form-check-label small" for="total_100_1k">$100 a $1,000</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input total-check" type="checkbox" value="0-100" id="total_100_less">
+                                        <label class="form-check-label small" for="total_100_less">Menor a $100</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in facturas %}
+                    <tr style="height: 48px;" 
+                        data-subtotal="{{ f.subtotal }}" 
+                        data-total="{{ f.total }}"
+                        data-rubro="{% if f.tipo_de_comprobante == 'I' %}INGRESO{% elif f.tipo_de_comprobante == 'E' %}EGRESO{% elif f.tipo_de_comprobante == 'T' %}TRASLADO{% elif f.tipo_de_comprobante == 'N' %}NÓMINA{% elif f.tipo_de_comprobante == 'P' %}PAGO{% else %}{{ f.tipo_de_comprobante }}{% endif %}"
+                        data-folio="{{ f.folio|default:''|lower }}"
+                        data-estado="{{ f.estado_detalle|default:''|lower }}"
+                        data-fecha="{{ f.fecha|date:'Y-m-d' }}"
+                        data-fecha-vence="{{ f.fecha|date:'Y-m-d' }}">
+                        
+                        <td class="ps-3 align-middle">
+                            <input type="checkbox" class="form-check-input factura-check" onchange="actualizarTotalesSeleccionados()">
+                        </td>
+                        
+                        <td class="align-middle text-truncate fw-semibold"> 
+                            <a href="{% url 'detalle_factura' f.id %}{% if f.es_manual == 'True' or f.es_manual == True %}?tipo=manual{% endif %}" class="text-decoration-none text-dark" onclick="activarSpinnerLink(this)">
+                                {{ f.nombre_emisor|default:"N/A" }}
+                            </a>
+                        </td>
+                   
+                        <td class="align-middle rubro-celda">
+                            <span class="badge {% if f.tipo_de_comprobante == 'I' %}bg-success-subtle text-success{% else %}bg-secondary-subtle text-secondary{% endif %}" style="font-size: 11px;">
+                                {% if f.tipo_de_comprobante == 'I' %}INGRESO
+                                {% elif f.tipo_de_comprobante == 'E' %}EGRESO
+                                {% elif f.tipo_de_comprobante == 'T' %}TRASLADO
+                                {% elif f.tipo_de_comprobante == 'N' %}NÓMINA
+                                {% elif f.tipo_de_comprobante == 'P' %}PAGO
+                                {% else %}{{ f.tipo_de_comprobante }}{% endif %}
+                            </span>
+                        </td>
+
+                        <td class="align-middle folio-celda font-monospace">{{ f.folio|default:"—" }}</td>
+                        
+                        <!-- Fecha Emisión -->
+                        <td class="align-middle text-muted fecha-es">
+                            {{ f.fecha|date:"d M Y"|default:"—" }}
+                        </td>
+                        
+                        <!-- Fecha Vencimiento -->
+                        <td class="align-middle text-muted fecha-es">
+                            {{ f.fecha|date:"d M Y"|default:"—" }}
+                        </td>           
+                    
+                        <!-- Estado -->
+                        <td class="align-middle estado-celda">
+                            {% if f.esta_pagada %}
+                                <span class="text-success fw-bold d-inline-flex align-items-center gap-1" style="font-size: 12px;">
+                                    <i class="fas fa-check-circle"></i> 
+                                    {% if "emitida" in f.tipo_descarga|lower or "emitidos" in f.tipo_descarga|lower %}Cobrada{% else %}Pagada{% endif %}
+                                </span>
+                            {% else %}
+                                {% if "emitida" in f.tipo_descarga|lower or "emitidos" in f.tipo_descarga|lower %}
+                                    <button type="button" class="btn btn-link text-danger p-0 text-decoration-none abrir-modal fw-semibold" 
+                                            style="font-size: 12px;"
+                                            data-tipo="cobrar" 
+                                            data-monto="{{ f.total }}" 
+                                            data-uuid="{{ f.uuid }}">
+                                        Por cobrar
+                                    </button>
+                                {% elif "recibida" in f.tipo_descarga|lower or "recibidos" in f.tipo_descarga|lower %}
+                                    <button type="button" class="btn btn-link text-danger p-0 text-decoration-none abrir-modal fw-semibold" 
+                                            style="font-size: 12px;"
+                                            data-tipo="pagar" 
+                                            data-monto="{{ f.total }}" 
+                                            data-uuid="{{ f.uuid }}">
+                                        Por pagar
+                                    </button>
+                                {% else %}
+                                    <span class="text-secondary" style="font-size: 12px;">{{ f.tipo_descarga }}</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+
+                        <td class="align-middle text-end text-secondary fw-semibold">
+                            {{ f.simbolo_moneda|default:"$" }}{{ f.subtotal|floatformat:2 }}
+                        </td>
+
+                        <td class="align-middle text-end pe-3 fw-bold text-dark">
+                            {{ f.simbolo_moneda|default:"$" }}{{ f.total|floatformat:2 }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="fas fa-file-invoice fa-2x text-secondary opacity-50 mb-2"></i>
+                            <div>No se encontraron facturas con los filtros seleccionados.</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 5. Paginación Corporativa -->
+<div class="d-flex justify-content-center align-items-center mt-3 gap-2">
+    {% if facturas.has_previous %}
+        <a class="filter-clear-btn" 
+           href="?page={{ facturas.previous_page_number }}&q={{ request.GET.q }}&emisor={{ request.GET.emisor }}&razon_social_id={{ request.GET.razon_social_id }}&page_size={{ request.GET.page_size }}&rubro={{ request.GET.rubro }}&folio={{ request.GET.folio }}&fecha={{ request.GET.fecha }}&vence={{ request.GET.vence }}&subtotal={{ request.GET.subtotal }}&total={{ request.GET.total }}&estado={{ request.GET.estado }}">
+            <i class="fas fa-chevron-left me-1"></i> Anterior
+        </a>
+    {% endif %}
+
+    <span class="mx-3 text-secondary fw-semibold" style="font-size: 13px;">
+        Página {{ facturas.number }} de {{ facturas.paginator.num_pages }}
+    </span>
+
+    {% if facturas.has_next %}
+        <a class="filter-clear-btn" 
+           href="?page={{ facturas.next_page_number }}&q={{ request.GET.q }}&emisor={{ request.GET.emisor }}&razon_social_id={{ request.GET.razon_social_id }}&page_size={{ request.GET.page_size }}&rubro={{ request.GET.rubro }}&folio={{ request.GET.folio }}&fecha={{ request.GET.fecha }}&vence={{ request.GET.vence }}&subtotal={{ request.GET.subtotal }}&total={{ request.GET.total }}&estado={{ request.GET.estado }}">
+            Siguiente <i class="fas fa-chevron-right ms-1"></i>
+        </a>
+    {% endif %}
+</div>
+
+<!-- ==========================================
+     MODALES DEL SISTEMA (CAPTURA, PAGO Y REPORTES)
+     ========================================== -->
+
+<!-- Modal Captura Manual -->
+<div class="modal fade" id="modalCapturaManual" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form method="POST" action="{% url 'guardar_factura_manual' %}" enctype="multipart/form-data" class="modal-content shadow">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" style="font-size: 15px;">Captura manual de facturas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-5 border-end text-center p-4">
+                        <input type="file" name="archivo" id="archivoManual" class="d-none" accept=".pdf,image/*">
+                        <button type="button" class="btn btn-outline-secondary btn-sm mb-2" onclick="document.getElementById('archivoManual').click();">
+                            <i class="fas fa-upload me-1"></i> Seleccionar archivo...
+                        </button>
+                        <p class="text-muted small mb-0" id="nombre-archivo-lbl">Arrastra una imagen o PDF aquí...</p>
+                    </div>
+
+                    <div class="col-12 col-md-7">
+                        <p class="text-muted small mb-3"><strong>Nota:</strong> Este formulario es para capturar facturas extranjeras o gastos no deducibles hechos en México.</p>
+                        
+                        <div class="form-group mb-2">
+                            <label class="form-label required">Empresa</label>
+                            <select name="razon_social_id" class="form-select form-select-sm" required>
+                                <option value="">Seleccione una empresa</option>
+                                {% for empresa in empresas %}
+                                    <option value="{{ empresa.id }}">{{ empresa.razon_social }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="row g-2 mb-2">
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label required">Proveedor</label>
+                                <input type="text" name="proveedor" id="inputProveedor" class="form-control form-control-sm" required>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">País</label>
+                                <select name="pais" class="form-select form-select-sm">
+                                    <option value="México">México</option>
+                                    <option value="Estados Unidos">Estados Unidos</option>
+                                    <option value="Extranjero">Extranjero</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-2" id="seccion-identificador-fiscal" style="display: none;">
+                            <label class="form-label">Identificador Fiscal</label>
+                            <input type="text" name="identificador_fiscal" class="form-control form-control-sm">
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label required">Total</label>
+                                <input type="number" step="0.01" name="total" class="form-control form-control-sm" required>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">Moneda</label>
+                                <select name="moneda" class="form-select form-select-sm">
+                                    <option value="Pesos mexicanos">Pesos mexicanos</option>
+                                    <option value="USD">USD (Dólar)</option>
+                                    <option value="EUR">EUR (Euro)</option>
+                                    <option value="CAD">CAD (Dólar canadiense)</option>
+                                    <option value="GBP">GBP (Libra esterlina)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label required">Fecha</label>
+                                <input type="date" name="fecha" class="form-control form-control-sm" required>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">Folio (opcional)</label>
+                                <input type="text" name="folio" class="form-control form-control-sm">
+                            </div>
+                        </div>
+
+                        <div class="mb-2" id="seccion-link-conceptos">
+                            <a href="#" id="link-agregar-conceptos" class="text-primary small text-decoration-none fw-semibold">
+                                + Agregar conceptos
+                            </a>
+                        </div>
+
+                        <div class="mt-2" id="seccion-conceptos" style="display: none;">
+                            <label class="form-label fw-bold">Conceptos</label>
+                            <div class="row g-1 text-muted small mb-1">
+                                <div class="col-3">Cantidad</div>
+                                <div class="col-3">Unidad</div>
+                                <div class="col-4">Descripción</div>
+                                <div class="col-2">Precio U.</div>
+                            </div>
+
+                            <div id="contenedor-conceptos">
+                                <div class="row g-1 mb-2 concepto-row align-items-center">
+                                    <div class="col-3"><input type="number" step="0.01" name="cantidad[]" class="form-control form-control-sm" value="1.00"></div>
+                                    <div class="col-3"><input type="text" name="unidad[]" class="form-control form-control-sm"></div>
+                                    <div class="col-4"><input type="text" name="descripcion[]" class="form-control form-control-sm"></div>
+                                    <div class="col-2 d-flex">
+                                        <input type="number" step="0.01" name="precio_unitario[]" class="form-control form-control-sm me-1" value="0.00">
+                                        <button type="button" class="btn btn-outline-danger btn-sm btn-eliminar-concepto" style="display: none;">×</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm mt-1" id="btn-agregar-fila">+ Fila</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary-custom btn-sm px-4">Guardar cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Registrar Pago / Cobro -->
+<div class="modal fade" id="modalRegistroPago" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+        <div class="modal-content shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="modalRegistroPagoLabel" style="font-size: 15px;">Registrar un pago</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <form id="formRegistroPago">
+                    
+                    <div class="mb-3" id="seccionPagadoPor" style="display: none;">
+                        <label class="form-label">Pagado por</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="pagado_por" id="btnEmpresa" value="empresa" checked autocomplete="off">
+                            <label class="btn btn-outline-secondary btn-sm" for="btnEmpresa">La empresa</label>
+
+                            <input type="radio" class="btn-check" name="pagado_por" id="btnTercero" value="tercero" autocomplete="off">
+                            <label class="btn btn-outline-secondary btn-sm" for="btnTercero">Socio / Empleado</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="seccionPersonaReembolsar" style="display: none;">
+                        <label for="persona_reembolsar" class="form-label">Persona a reembolsar</label>
+                        <input type="text" class="form-control form-control-sm" id="persona_reembolsar" name="persona_reembolsar" placeholder="Nombre de la persona">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="cuenta_pago" class="form-label required">Cuenta de pago</label>
+                        <select class="form-select form-select-sm" id="cuenta_pago" name="cuenta_pago" required>
+                            <option value="" selected disabled>Seleccione una cuenta...</option>
+                            {% for cuenta in cuentas %}
+                                <option value="{{ cuenta.id }}">{{ cuenta.banco_nombre }} {{ cuenta.ultimos_cuatro }}</option>
+                            {% endfor %}
+                            <option value="nuevo">--- Registrar nuevo banco ---</option>
+                        </select>
+                    </div>
+
+                    <div id="seccionNuevoBanco" style="display: none;">
+                        <div class="mb-2">
+                            <label for="nuevo_nombre_banco" class="form-label">Nombre del banco</label>
+                            <input type="text" class="form-control form-control-sm" id="nuevo_nombre_banco" name="nuevo_nombre_banco" placeholder="Ej. Banorte, BBVA...">
+                        </div>
+                        <div class="mb-3">
+                            <label for="nueva_cuenta_completa" class="form-label">Número de cuenta</label>
+                            <input type="text" class="form-control form-control-sm" id="nueva_cuenta_completa" name="nueva_cuenta_completa" placeholder="Cuenta completa">
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="descripcion_pago" class="form-label">Descripción del pago</label>
+                        <input type="text" class="form-control form-control-sm" id="descripcion_pago" name="descripcion_pago" placeholder="Referencia / Cheque">
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="referencia_pago" class="form-label">Referencia</label>
+                        <input type="text" class="form-control form-control-sm" id="referencia_pago" name="referencia_pago">
+                    </div>
+
+                    <div class="mb-2" id="contenedorFechaLabel">
+                        <label for="fecha_pago" class="form-label" id="labelFechaTexto">Fecha de pago al proveedor</label>
+                        <input type="text" class="form-control form-control-sm" id="fecha_pago" name="fecha_pago">
+                    </div>
+
+                    <div class="mb-2" id="seccionFechaReembolso" style="display: none;">
+                        <label for="fecha_reembolso" class="form-label">Fecha de reembolso final</label>
+                        <input type="text" class="form-control form-control-sm" id="fecha_reembolso" name="fecha_reembolso">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="monto_pago" class="form-label required">Monto</label>
+                        <input type="text" class="form-control form-control-sm" id="monto_pago" name="monto_pago">
+                    </div>
+
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary-custom btn-sm px-4" id="btnGuardarPago">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Reporte Personalizado -->
+<div class="modal fade" id="modalReportePersonalizado" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="modalReporteLabel" style="font-size: 15px;">Crear reporte personalizado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="inputTituloReporte" class="form-label required">Título</label>
+                    <input type="text" class="form-control form-control-sm" id="inputTituloReporte" placeholder="Nombre del reporte">
+                </div>
+
+                <div class="row mb-3 g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Excluir canceladas</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="excluirCanceladas" id="excluirSi" value="Sí" autocomplete="off">
+                            <label class="btn btn-outline-secondary btn-sm" for="excluirSi">Sí</label>
+
+                            <input type="radio" class="btn-check" name="excluirCanceladas" id="excluirNo" value="No" autocomplete="off" checked>
+                            <label class="btn btn-outline-secondary btn-sm" for="excluirNo">No</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Consolidar impuestos locales</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="consolidarImpuestos" id="impuestosSi" value="Sí" autocomplete="off">
+                            <label class="btn btn-outline-secondary btn-sm" for="impuestosSi">Sí</label>
+
+                            <input type="radio" class="btn-check" name="consolidarImpuestos" id="impuestosNo" value="No" autocomplete="off" checked>
+                            <label class="btn btn-outline-secondary btn-sm" for="impuestosNo">No</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row border-top pt-3 g-2">
+                    <div class="col-md-6 border-end">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold small">Columnas disponibles</span>
+                            <button type="button" class="btn btn-link btn-sm text-decoration-none p-0" onclick="agregarTodasColumnas()">Agregar todas</button>
+                        </div>
+                        <div class="list-group p-1 border rounded" id="listaDisponibles" style="max-height: 220px; overflow-y: auto;"></div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold small">Columnas seleccionadas</span>
+                            <button type="button" class="btn btn-link btn-sm text-decoration-none text-danger p-0" onclick="quitarTodasColumnas()">Quitar todas</button>
+                        </div>
+                        <div class="list-group p-1 border rounded" id="listaSeleccionadas" style="max-height: 220px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary-custom btn-sm px-4" onclick="guardarReportePersonalizado()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Flatpickr JS & Spanish locale -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+
+<script>
+    // --- FUNCIÓN GLOBAL PARA ACTUALIZAR CONTADORES DE SELECCIÓN ---
+    function actualizarTotalesSeleccionados() {
+        let checkboxes = document.querySelectorAll('.factura-check:checked');
+        let count = checkboxes.length;
+        let contenedorSel = document.getElementById('contador-seleccionado');
+        let separador = document.getElementById('separador-totales');
+
+        if (!contenedorSel) return;
+
+        if (count === 0) {
+            contenedorSel.classList.add('d-none');
+            if (separador) separador.classList.add('d-none');
+            contenedorSel.innerHTML = "";
+            return;
+        }
+
+        let subtotalSeleccionado = 0;
+        let totalSeleccionado = 0;
+
+        checkboxes.forEach(function(chk) {
+            let tr = chk.closest('tr');
+            let sub = parseFloat(tr.getAttribute('data-subtotal')) || 0;
+            let tot = parseFloat(tr.getAttribute('data-total')) || 0;
+            
+            subtotalSeleccionado += sub;
+            totalSeleccionado += tot;
+        });
+
+        let subFormatted = subtotalSeleccionado.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        let totFormatted = totalSeleccionado.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+        contenedorSel.innerHTML = `${count} seleccionada${count === 1 ? '' : 's'} ($${totFormatted})`;
+        contenedorSel.classList.remove('d-none');
+        if (separador) separador.classList.remove('d-none');
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        // --- BÚSQUEDA DE EMISORES OPTIMIZADA ---
+        const input = document.getElementById('inputBusquedaEmisor');
+        if (input) {
+            input.addEventListener('input', function(e) {
+                let filtro = this.value.toLowerCase().trim();
+                let items = document.querySelectorAll('#lista-emisores .dropdown-item');
+                let matches = 0;
+
+                for (let i = 0; i < items.length; i++) {
+                    let texto = items[i].innerText.toLowerCase();
+                    if (filtro === "") {
+                        items[i].style.display = (i < 30) ? "" : "none";
+                    } else {
+                        if (texto.includes(filtro) && matches < 50) {
+                            items[i].style.display = "";
+                            matches++;
+                        } else {
+                            items[i].style.display = "none";
+                        }
+                    }
+                }
+            });
+
+            const dropdownToggle = input.closest('.dropdown')?.querySelector('[data-bs-toggle="dropdown"], .dropdown-toggle');
+            if (dropdownToggle) {
+                dropdownToggle.addEventListener('click', function() {
+                    setTimeout(() => {
+                        if (input.value.trim() === "") {
+                            let items = document.querySelectorAll('#lista-emisores .dropdown-item');
+                            items.forEach((item, index) => {
+                                item.style.display = index < 30 ? "" : "none";
+                            });
+                        }
+                    }, 50);
+                });
+            }
+        }
+
+        // Permitir clic en todo el renglón para marcar/desmarcar
+        document.querySelectorAll('#lista-emisores .dropdown-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                const checkbox = this.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    if (e.target !== checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                    }
+                    let seleccionados = [];
+                    document.querySelectorAll('#lista-emisores input[type="checkbox"]:checked').forEach(ch => {
+                        seleccionados.push(ch.value);
+                    });
+                    let url = new URL(window.location.href);
+                    if (seleccionados.length > 0) {
+                        url.searchParams.set('emisor', seleccionados.join('|'));
+                    } else {
+                        url.searchParams.delete('emisor');
+                    }
+                    window.location.href = url.toString();
+                }
+            });
+        });
+
+        // --- FILTRADO DE SUBTOTAL ---
+        const subtotalCheckboxes = document.querySelectorAll('.subtotal-check');
+        const btnTodosSubtotales = document.getElementById('filtro-subtotal-todos');
+
+        subtotalCheckboxes.forEach(ch => {
+            ch.addEventListener('change', function() {
+                let url = new URL(window.location.href);
+                document.querySelectorAll('.subtotal-check').forEach(x => { if(x !== this){ x.checked = false; } });
+                if(this.checked){
+                    url.searchParams.set('subtotal', this.value);
+                }else{
+                    url.searchParams.delete('subtotal');
+                }
+                window.location.href = url.toString();
+            });
+        });
+
+        if (btnTodosSubtotales) {
+            btnTodosSubtotales.addEventListener('click', function(e) {
+                e.preventDefault();
+                let url = new URL(window.location.href);
+                url.searchParams.delete('subtotal');
+                window.location.href = url.toString();
+            });
+        }
+
+        // --- FILTRADO DE TOTAL ---
+        const totalCheckboxes = document.querySelectorAll('.total-check');
+        const btnTodosTotales = document.getElementById('filtro-total-todos');
+
+        totalCheckboxes.forEach(ch => {
+            ch.addEventListener('change', function() {
+                let url = new URL(window.location.href);
+                document.querySelectorAll('.total-check').forEach(x => { if(x !== this){ x.checked = false; } });
+                if(this.checked){
+                    url.searchParams.set('total', this.value);
+                }else{
+                    url.searchParams.delete('total');
+                }
+                window.location.href = url.toString();
+            });
+        });
+
+        if (btnTodosTotales) {
+            btnTodosTotales.addEventListener('click', function(e) {
+                e.preventDefault();
+                let url = new URL(window.location.href);
+                url.searchParams.delete('total');
+                window.location.href = url.toString();
+            });
+        }
+
+        // --- FILTRADO DE FECHA ---
+        const inputFecha = document.getElementById('filtroFecha');
+        const btnConsultarFecha = document.getElementById('btnConsultarFecha');
+        const btnLimpiarFecha = document.getElementById('btnLimpiarFecha');
+
+        if (inputFecha) {
+            flatpickr(inputFecha, {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                locale: "es",
+                altInput: true,
+                altFormat: "d/m/Y",
+                conjunction: " to ",
+                inline: true,
+                onChange: function(selectedDates, dateStr, instance) {
+                    inputFecha.value = dateStr;
+                }
+            });
+        }
+
+        if (btnConsultarFecha) {
+            btnConsultarFecha.addEventListener('click', function(e) {
+                e.preventDefault();
+                let url = new URL(window.location.href);
+                let valFecha = inputFecha.value;
+                if (!valFecha && inputFecha._flatpickr) {
+                    valFecha = inputFecha._flatpickr.input.value;
+                }
+                if (valFecha){
+                    url.searchParams.set('fecha', valFecha);
+                } else {
+                    url.searchParams.delete('fecha');
+                }
+                window.location.href = url.toString();
+            });
+        }
+
+        if (btnLimpiarFecha) {
+            btnLimpiarFecha.addEventListener('click', function(e) {
+                e.preventDefault();
+                let url = new URL(window.location.href);
+                url.searchParams.delete('fecha');
+                if (inputFecha && inputFecha._flatpickr) {
+                    inputFecha._flatpickr.clear();
+                }
+                window.location.href = url.toString();
+            });
+        }
+
+        // --- FILTRADO DE FECHA VENCIMIENTO ---
+        const inputFechaVence = document.getElementById('filtroFechaVence');
+        const btnConsultarFechaVence = document.getElementById('btnConsultarFechaVence');
+        const btnLimpiarFechaVence = document.getElementById('btnLimpiarFechaVence');
+
+        if (inputFechaVence) {
+            flatpickr(inputFechaVence, {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                locale: "es",
+                altInput: true,
+                altFormat: "d/m/Y",
+                conjunction: " to ",
+                inline: true,
+                onChange: function(selectedDates, dateStr, instance) {
+                    inputFechaVence.value = dateStr;
+                }
+            });
+        }
+
+        if (btnConsultarFechaVence) {
+            btnConsultarFechaVence.addEventListener('click', function(e) {
+                e.preventDefault();
+                let url = new URL(window.location.href);
+                let valVence = inputFechaVence.value;
+                if (!valVence && inputFechaVence._flatpickr) {
+                    valVence = inputFechaVence._flatpickr.input.value;
+                }
+                if (valVence){
+                    url.searchParams.set('vence', valVence); 
+                } else {
+                    url.searchParams.delete('vence');
+                }
+                window.location.href = url.toString();
+            });
+        }
+
+        if (btnLimpiarFechaVence) {
+            btnLimpiarFechaVence.addEventListener('click', function(e) {
+                e.preventDefault();
+                let url = new URL(window.location.href);
+                url.searchParams.delete('vence');
+                if (inputFechaVence && inputFechaVence._flatpickr) {
+                    inputFechaVence._flatpickr.clear();
+                }
+                window.location.href = url.toString();
+            });
+        }
+
+        // --- FILTRADO DE FOLIO ---
+        const inputFolio = document.getElementById('inputBusquedaFolio');
+        const btnAplicarFolio = document.getElementById('btn-aplicar-folio');
+        const btnMostrarTodosFolio = document.getElementById('btn-mostrar-todos-folio');
+
+        if (btnAplicarFolio) {
+            btnAplicarFolio.addEventListener('click', function(e) {
+                e.preventDefault();
+                let valor = inputFolio.value.trim();
+                let url = new URL(window.location.href);
+                if(valor){
+                    url.searchParams.set('folio', valor);
+                }else{
+                    url.searchParams.delete('folio');
+                }
+                window.location.href = url.toString();
+            });
+        }
+
+        if (btnMostrarTodosFolio) {
+            btnMostrarTodosFolio.addEventListener('click', function(e) {
+                e.preventDefault();
+                let url = new URL(window.location.href);
+                url.searchParams.delete('folio');
+                window.location.href = url.toString();
+            });
+        }
+
+        // --- FILTRADO DE RUBRO Y ESTADOS ---
+        const rubroCheckboxes = document.querySelectorAll('.rubro-check');
+        const btnTodosRubros = document.getElementById('filtro-rubro-todos');
+
+        rubroCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                let seleccionados = [];
+                document.querySelectorAll('.rubro-check:checked').forEach(ch => { seleccionados.push(ch.value); });
+                let url = new URL(window.location.href);
+                if (seleccionados.length > 0) {
+                    url.searchParams.set('rubro', seleccionados.join('|'));
+                } else {
+                    url.searchParams.delete('rubro');
+                }
+                window.location.href = url.toString();
+            });
+        });
+
+        if (btnTodosRubros) {
+            btnTodosRubros.addEventListener('click', function(e) {
+                e.preventDefault();
+                let url = new URL(window.location.href);
+                url.searchParams.delete('rubro');
+                window.location.href = url.toString();
+            });
+        }
+
+        const estadoCheckboxes = document.querySelectorAll('.estado-check');
+        const btnTodosEstados = document.getElementById('filtro-estado-todos');
+
+        estadoCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                let seleccionados = [];
+                document.querySelectorAll('.estado-check:checked').forEach(ch => { seleccionados.push(ch.value); });
+                let url = new URL(window.location.href);
+                if (seleccionados.length > 0) {
+                    url.searchParams.set('estado', seleccionados.join('|'));
+                } else {
+                    url.searchParams.delete('estado');
+                }
+                window.location.href = url.toString();
+            });
+        });
+
+        if (btnTodosEstados) {
+            btnTodosEstados.addEventListener('click', function(e) {
+                e.preventDefault();
+                let url = new URL(window.location.href);
+                url.searchParams.delete('estado');
+                window.location.href = url.toString();
+            });
+        }
+
+        // --- BOTONES DESCARGA XML CON LOADER ---
+        const btnIncluirCanceladas = document.getElementById('btn-incluir-canceladas');
+        if (btnIncluirCanceladas) {
+            btnIncluirCanceladas.addEventListener('click', function(e) {
+                e.preventDefault();
+                const params = new URLSearchParams(window.location.search);
+                params.delete('excluir_canceladas');
+                const urlDescarga = "{% url 'descargar_facturas_xml' %}?" + params.toString();
+                iniciarDescargaConLoader(urlDescarga);
+            });
+        }
+
+        const btnExcluirCanceladas = document.getElementById('btn-excluir-canceladas');
+        if (btnExcluirCanceladas) {
+            btnExcluirCanceladas.addEventListener('click', function(e) {
+                e.preventDefault();
+                const params = new URLSearchParams(window.location.search);
+                params.set('excluir_canceladas', 'true');
+                const urlDescarga = "{% url 'descargar_facturas_xml' %}?" + params.toString();
+                iniciarDescargaConLoader(urlDescarga);
+            });
+        }
+    });
+
+    // --- DESCARGAS CONTROLADAS CON LOADER ---
+    function iniciarDescargaConLoader(urlDescarga) {
+        const loaderContainer = document.getElementById('loading-container');
+        if (loaderContainer) loaderContainer.style.display = 'block';
+
+        document.cookie = "fileDownloaded=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.href = urlDescarga;
+
+        const checkDownload = setInterval(function () {
+            if (document.cookie.indexOf('fileDownloaded=true') !== -1) {
+                clearInterval(checkDownload);
+                if (loaderContainer) loaderContainer.style.display = 'none';
+            }
+        }, 500);
+    }
+
+    function descargarExcelloader(urlDescarga) {
+        const loaderContainer = document.getElementById('loading-container');
+        if (loaderContainer) loaderContainer.style.display = 'block';
+
+        document.cookie = "excelFacturasDescargado=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.href = urlDescarga;
+
+        const checkDownload = setInterval(function () {
+            if (document.cookie.indexOf('excelFacturasDescargado=true') !== -1) {
+                clearInterval(checkDownload);
+                if (loaderContainer) loaderContainer.style.display = 'none';
+            }
+        }, 300);
+    }
+
+    // ==========================================
+    // INICIALIZACIÓN DE MODAL DE REGISTRO DE PAGO
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', function () {
+        flatpickr("#fecha_pago", { locale: "es", dateFormat: "d M Y", defaultDate: "today" });
+        flatpickr("#fecha_reembolso", { locale: "es", dateFormat: "d M Y", allowInput: true });
+
+        const modalElement = document.getElementById('modalRegistroPago');
+        const modal = new bootstrap.Modal(modalElement);
+
+        const seccionPagadoPor = document.getElementById('seccionPagadoPor');
+        const seccionPersonaReembolsar = document.getElementById('seccionPersonaReembolsar');
+        const seccionFechaReembolso = document.getElementById('seccionFechaReembolso');
+        const labelFechaTexto = document.getElementById('labelFechaTexto');
+        const inputMonto = document.getElementById('monto_pago');
+        const btnEmpresa = document.getElementById('btnEmpresa');
+        const btnTercero = document.getElementById('btnTercero');
+
+        let registroUuidActual = null;
+
+        document.querySelectorAll('.abrir-modal').forEach(button => {
+            button.addEventListener('click', function () {
+                registroUuidActual = this.getAttribute('data-uuid');
+                const tipo = this.getAttribute('data-tipo');
+                const monto = this.getAttribute('data-monto');
+                
+                inputMonto.value = monto;
+
+                if (tipo === 'cobrar') {
+                    seccionPagadoPor.style.display = 'none';
+                    seccionPersonaReembolsar.style.display = 'none';
+                    seccionFechaReembolso.style.display = 'none';
+                    labelFechaTexto.textContent = 'Fecha de cobro';
+                } else if (tipo === 'pagar') {
+                    seccionPagadoPor.style.display = 'block';
+                    labelFechaTexto.textContent = 'Fecha de pago al proveedor';
+                    btnEmpresa.checked = true;
+                    seccionPersonaReembolsar.style.display = 'none';
+                    seccionFechaReembolso.style.display = 'none';
+                }
+                modal.show();
+            });
+        });
+
+        if (btnTercero) {
+            btnTercero.addEventListener('change', function () {
+                if (this.checked) {
+                    seccionPersonaReembolsar.style.display = 'block';
+                    seccionFechaReembolso.style.display = 'block';
+                }
+            });
+        }
+
+        if (btnEmpresa) {
+            btnEmpresa.addEventListener('change', function () {
+                if (this.checked) {
+                    seccionPersonaReembolsar.style.display = 'none';
+                    seccionFechaReembolso.style.display = 'none';
+                }
+            });
+        }
+
+        if (modalElement) {
+            modalElement.addEventListener('hidden.bs.modal', function () {
+                const form = modalElement.querySelector('form');
+                if (form) form.reset();
+                const seccionNuevoBanco = document.getElementById('seccionNuevoBanco');
+                if (seccionNuevoBanco) seccionNuevoBanco.style.display = 'none';
+                if (seccionPagadoPor) seccionPagadoPor.style.display = 'none';
+                if (seccionPersonaReembolsar) seccionPersonaReembolsar.style.display = 'none';
+                if (seccionFechaReembolso) seccionFechaReembolso.style.display = 'none';
+                registroUuidActual = null;
+            });
+        }
+
+        const btnGuardarPago = document.getElementById('btnGuardarPago');
+        const formModal = modalElement.querySelector('form');
+
+        if (btnGuardarPago && formModal) {
+            btnGuardarPago.addEventListener('click', function (e) {
+                e.preventDefault();
+                const formData = new FormData(formModal);
+                formData.append('uuid', registroUuidActual);
+                const pagadoPorValor = btnTercero && btnTercero.checked ? 'Socio / Empleado / Tercero' : 'La empresa';
+                formData.append('pagado_por', pagadoPorValor);
+
+                fetch("{% url 'registrar_pago_manual' %}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+                })
+                .then(() => location.reload())
+                .catch(error => { console.error('Error:', error); location.reload(); });
+            });
+        }
+
+        const selectCuentaPago = document.getElementById('cuenta_pago');
+        if (selectCuentaPago) {
+            selectCuentaPago.addEventListener('change', function() {
+                const seccionNuevo = document.getElementById('seccionNuevoBanco');
+                const inputBanco = document.getElementById('nuevo_nombre_banco');
+                const inputCuenta = document.getElementById('nueva_cuenta_completa');
+                
+                if (this.value === 'nuevo') {
+                    if (seccionNuevo) seccionNuevo.style.display = 'block';
+                    if (inputBanco) inputBanco.setAttribute('required', 'true');
+                    if (inputCuenta) inputCuenta.setAttribute('required', 'true');
+                } else {
+                    if (seccionNuevo) seccionNuevo.style.display = 'none';
+                    if (inputBanco) inputBanco.removeAttribute('required');
+                    if (inputCuenta) inputCuenta.removeAttribute('required');
+                }
+            });
+        }
+
+        const inputProveedor = document.getElementById('inputProveedor');
+        if (inputProveedor) {
+            inputProveedor.addEventListener('input', function() {
+                const seccionIdFiscal = document.getElementById('seccion-identificador-fiscal');
+                if (seccionIdFiscal) {
+                    seccionIdFiscal.style.display = this.value.trim().length > 0 ? 'block' : 'none';
+                }
+            });
+        }
+
+        const linkConceptos = document.getElementById('link-agregar-conceptos');
+        if (linkConceptos) {
+            linkConceptos.addEventListener('click', function(e) {
+                e.preventDefault();
+                const secConceptos = document.getElementById('seccion-conceptos');
+                if (secConceptos) secConceptos.style.display = 'block';
+                this.parentElement.style.display = 'none';
+            });
+        }
+
+        const btnAgregarFila = document.getElementById('btn-agregar-fila');
+        if (btnAgregarFila) {
+            btnAgregarFila.addEventListener('click', function () {
+                const contenedor = document.getElementById('contenedor-conceptos');
+                const primeraFila = contenedor.querySelector('.concepto-row');
+                const nuevaFila = primeraFila.cloneNode(true);
+                
+                nuevaFila.querySelectorAll('input').forEach(input => {
+                    if (input.type === 'number' && input.value !== '1.00') {
+                        input.value = '0.00';
+                    } else if (input.type !== 'number') {
+                        input.value = '';
+                    }
+                });
+
+                const btnEliminar = nuevaFila.querySelector('.btn-eliminar-concepto');
+                if (btnEliminar) {
+                    btnEliminar.style.display = 'block';
+                    btnEliminar.addEventListener('click', function () {
+                        nuevaFila.remove();
+                        actualizarVisibilidadBotonesMenos();
+                    });
+                }
+                contenedor.appendChild(nuevaFila);
+                actualizarVisibilidadBotonesMenos();
+            });
+        }
+
+        const archivoManual = document.getElementById('archivoManual');
+        if (archivoManual) {
+            archivoManual.addEventListener('change', function() {
+                if(this.files && this.files[0]) {
+                    const lbl = document.getElementById('nombre-archivo-lbl');
+                    if (lbl) lbl.innerText = this.files[0].name;
+                }
+            });
+        }
+    });
+
+    function actualizarVisibilidadBotonesMenos() {
+        const filas = document.querySelectorAll('#contenedor-conceptos .concepto-row');
+        filas.forEach((fila) => {
+            const btn = fila.querySelector('.btn-eliminar-concepto');
+            if (btn) btn.style.display = filas.length === 1 ? 'none' : 'block';
+        });
+    }
+
+    // ==========================================
+    // REPORTES PERSONALIZADOS
+    // ==========================================
+    const columnasMaster = [
+        "Tipo (ingreso/gasto)", "Fecha emisión", "Fecha pago proveedor", "Fecha pago final", 
+        "Estado", "Reembolsar a", "Cuenta(s) de pago", "Descripciones pagos", 
+        "Órdenes de compra", "Entradas de mercancía", "Razón social (emisor)", 
+        "Razón social (receptor)", "Comentarios", "Fecha vencimiento", "Moneda original", 
+        "Total original", "Pagado (incl. reembolsables) (original)", "Pagado (final) (original)", 
+        "Subtotal", "Descuentos", "Total", "Impuestos trasladados", "Impuestos retenidos", 
+        "Subtotal ajustado", "Subtotal ajustado por tasa de IVA", "Trasladado: IEPS", 
+        "Trasladado: IVA", "Trasladado: Otros", "Retenido: ISR", "Retenido: IVA", 
+        "Retenido: Otros", "Método de pago", "Forma de pago", "Uso de CFDI", 
+        "Régimen fiscal", "Tipo de relación", "CFDIs relacionados", "Fecha cancelación", 
+        "Folio fiscal (UUID)", "Verificación SAT (CFDI)", "Validación sello (CFDI)", 
+        "Advertencias", "Aprobada", "Registro patronal", "Estatus CRP", "Ver", 
+        "Subtotal original", "Descuentos original", "Subtotal aj. IVA 16% en moneda original", 
+        "Subtotal aj. IVA 8% en moneda original", "Subtotal aj. IVA 0% en moneda original", 
+        "Subtotal aj. exento del IVA en moneda original", "Tipo de cambio", "Número de pedimento", 
+        "Versión CFDI", "Régimen fiscal receptor", "Código postal receptor", "Exportación", 
+        "Información factura global", "Fecha timbrado", "Lugar expedición", "Conceptos concatenados", 
+        "Referencia de pago", "Datos capturados", "RFC (emisor)", "RFC (receptor)", 
+        "Serie", "Rubro", "Folio"
+    ];
+
+    let reporteEditandoId = null;
+    let reportesGuardados = [];
+    let columnasDisponiblesActuales = [];
+    let columnasSeleccionadasActuales = [];
+
+    function prepararNuevoReporte() {
+        reporteEditandoId = null;
+        document.getElementById('modalReporteLabel').innerText = "Crear reporte personalizado";
+        document.getElementById('inputTituloReporte').value = '';
+        document.getElementById('excluirNo').checked = true;
+        document.getElementById('impuestosNo').checked = true;
+
+        columnasSeleccionadasActuales = ["Tipo (ingreso/gasto)", "Fecha emisión", "Fecha pago proveedor"];
+        columnasDisponiblesActuales = columnasMaster.filter(c => !columnasSeleccionadasActuales.includes(c));
+        renderizarListasColumnas();
+    }
+
+    function renderizarListasColumnas() {
+        const contDisponibles = document.getElementById('listaDisponibles');
+        const contSeleccionadas = document.getElementById('listaSeleccionadas');
+        if (!contDisponibles || !contSeleccionadas) return;
+
+        contDisponibles.innerHTML = '';
+        contSeleccionadas.innerHTML = '';
+
+        columnasDisponiblesActuales.forEach(col => {
+            const item = document.createElement('div');
+            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-1 px-2 mb-1 border rounded bg-white';
+            item.style.cursor = 'pointer';
+            item.innerHTML = `<span class="small text-truncate" style="max-width: 250px;">${col}</span> <span class="badge bg-light text-dark border px-2 py-1">+</span>`;
+            item.onclick = () => moverColumna(col, 'aSeleccionadas');
+            contDisponibles.appendChild(item);
+        });
+
+        columnasSeleccionadasActuales.forEach(col => {
+            const item = document.createElement('div');
+            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-1 px-2 mb-1 border rounded bg-white';
+            item.style.cursor = 'pointer';
+            item.innerHTML = `<span class="small text-truncate" style="max-width: 250px;">${col}</span> <span class="badge bg-light text-dark border px-2 py-1">×</span>`;
+            item.onclick = () => moverColumna(col, 'aDisponibles');
+            contSeleccionadas.appendChild(item);
+        });
+    }
+
+    function moverColumna(columna, destino) {
+        if (destino === 'aSeleccionadas') {
+            columnasDisponiblesActuales = columnasDisponiblesActuales.filter(c => c !== columna);
+            columnasSeleccionadasActuales.push(columna);
+        } else {
+            columnasSeleccionadasActuales = columnasSeleccionadasActuales.filter(c => c !== columna);
+            columnasDisponiblesActuales.push(columna);
+        }
+        renderizarListasColumnas();
+    }
+
+    function agregarTodasColumnas() {
+        columnasDisponiblesActuales = [];
+        columnasSeleccionadasActuales = [...columnasMaster];
+        renderizarListasColumnas();
+    }
+
+    function quitarTodasColumnas() {
+        columnasSeleccionadasActuales = [];
+        columnasDisponiblesActuales = [...columnasMaster];
+        renderizarListasColumnas();
+    }
+
+    function guardarReportePersonalizado() {
+        const titulo = document.getElementById('inputTituloReporte').value.trim();
+        if (!titulo) {
+            alert("Por favor ingresa un título para el reporte.");
+            return;
+        }
+
+        const excluirCanceladas = document.querySelector('input[name="excluirCanceladas"]:checked').value;
+        const consolidarImpuestos = document.querySelector('input[name="consolidarImpuestos"]:checked').value;
+
+        const datosReporte = {
+            id: reporteEditandoId !== null ? reporteEditandoId : Date.now(),
+            titulo: titulo,
+            excluirCanceladas: excluirCanceladas,
+            consolidarImpuestos: consolidarImpuestos,
+            columnas: [...columnasSeleccionadasActuales]
+        };
+
+        if (reporteEditandoId !== null) {
+            let index = reportesGuardados.findIndex(r => r.id === reporteEditandoId);
+            if (index !== -1) reportesGuardados[index] = datosReporte;
+        } else {
+            reportesGuardados.push(datosReporte);
+        }
+
+        renderizarReportesEnMenu();
+        const modalEl = document.getElementById('modalReportePersonalizado');
+        bootstrap.Modal.getInstance(modalEl).hide();
+    }
+
+    function renderizarReportesEnMenu() {
+        const listaContainer = document.getElementById('lista-reportes-personalizados');
+        const divisorContainer = document.getElementById('divisor-container');
+        if (!listaContainer) return;
+
+        listaContainer.querySelectorAll('.reporte-dinamico-item').forEach(el => el.remove());
+        const divisorReportes = document.getElementById('divisor-reportes');
+
+        if (reportesGuardados.length > 0) {
+            if (divisorReportes) divisorReportes.style.display = 'block';
+            reportesGuardados.forEach(reporte => {
+                const li = document.createElement('div');
+                li.className = 'reporte-dinamico-item d-flex align-items-center justify-content-between dropdown-item py-1';
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.set('titulo', reporte.titulo);
+                urlParams.set('excluir_canceladas_rep', reporte.excluirCanceladas === 'Sí' ? 'true' : 'false');
+                urlParams.set('consolidar_impuestos', reporte.consolidarImpuestos === 'Sí' ? 'true' : 'false');
+                urlParams.set('columnas', JSON.stringify(reporte.columnas));
+                const urlFinal = `{% url 'exportar_facturas_personalizado_excel' %}?` + urlParams.toString();
+
+                li.innerHTML = `
+                    <a href="#" class="text-truncate me-2 text-decoration-none text-dark flex-grow-1" 
+                       onclick="descargarExcelloader('${urlFinal}'); return false;" 
+                       title="Descargar: ${reporte.titulo}">${reporte.titulo}</a>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-light border p-1" onclick="cargarReporteParaEditar(${reporte.id})" title="Editar">✏️</button>
+                        <button class="btn btn-sm btn-light border p-1 text-danger ms-1" onclick="eliminarReporte(${reporte.id})" title="Eliminar">🗑️</button>
+                    </div>
+                `;
+                listaContainer.insertBefore(li, divisorContainer);
+            });
+        } else {
+            if (divisorReportes) divisorReportes.style.display = 'none';
+        }
+    }
+
+    function cargarReporteParaEditar(id) {
+        const reporte = reportesGuardados.find(r => r.id === id);
+        if (!reporte) return;
+
+        reporteEditandoId = reporte.id;
+        document.getElementById('modalReporteLabel').innerText = "Editar reporte personalizado";
+        document.getElementById('inputTituloReporte').value = reporte.titulo;
+        document.getElementById('excluirSi').checked = (reporte.excluirCanceladas === 'Sí');
+        document.getElementById('excluirNo').checked = (reporte.excluirCanceladas !== 'Sí');
+        document.getElementById('impuestosSi').checked = (reporte.consolidarImpuestos === 'Sí');
+        document.getElementById('impuestosNo').checked = (reporte.consolidarImpuestos !== 'Sí');
+
+        columnasSeleccionadasActuales = [...reporte.columnas];
+        columnasDisponiblesActuales = columnasMaster.filter(c => !columnasSeleccionadasActuales.includes(c));
+        renderizarListasColumnas();
+        new bootstrap.Modal(document.getElementById('modalReportePersonalizado')).show();
+    }
+
+    function eliminarReporte(id) {
+        if (confirm("¿Estás seguro de que deseas eliminar este reporte personalizado?")) {
+            reportesGuardados = reportesGuardados.filter(r => r.id !== id);
+            renderizarReportesEnMenu();
+        }
+    }
+</script>
+{% endblock %}

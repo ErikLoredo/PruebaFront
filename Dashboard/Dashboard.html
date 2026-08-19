@@ -1,0 +1,249 @@
+{% extends "Inicio/Base/base.html" %}
+
+{% block title %}Dashboard | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
+{% endblock %}
+
+{% block extra_css %}
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block page_content %}
+
+    <!-- 1. Barra de Filtros Estandarizada -->
+    <div class="card-corporate mb-4">
+        <div class="card-corporate-body p-3">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-md-4">
+                    <input type="text" id="filtroFecha" class="filter-control w-100" placeholder="Selecciona fecha o rango de fechas">
+                </div>
+                <div class="col-6 col-md-2">
+                    <button type="button" class="filter-apply w-100" onclick="cargarDatos()">
+                        <i class="fas fa-search me-1"></i>
+                        <span>Consultar</span>
+                    </button>
+                </div>
+                <div class="col-6 col-md-2">
+                    <button type="button" class="filter-clear-btn w-100" onclick="limpiarFiltro()">
+                        <i class="fas fa-undo-alt me-1"></i>
+                        <span>Limpiar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Indicadores / Gráficas de Desempeño (Con más holgura y espacio hacia abajo) -->
+    <div class="row g-4 justify-content-center pt-2 mb-3">
+        
+        <!-- Tarjeta de Ventas -->
+        <div class="col-12 col-xl-6">
+            <div class="card-corporate h-100 mb-0">
+                <div class="card-corporate-body p-4">
+                    <h6 class="fw-bold text-muted text-uppercase mb-2" style="font-size: var(--font-size-md, 12px); letter-spacing: 0.5px;">
+                        Ingresos / Ventas
+                    </h6>
+
+                    <h3 id="txtVentas" class="fw-bold mb-4" style="color: #059669; font-size: 1.65rem;">
+                        Cargando...
+                    </h3>
+
+                    <div style="position: relative; height: 190px; width: 100%; margin-top: 10px;">
+                        <canvas id="ventasChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta de Gastos -->
+        <div class="col-12 col-xl-6">
+            <div class="card-corporate h-100 mb-0">
+                <div class="card-corporate-body p-4">
+                    <h6 class="fw-bold text-muted text-uppercase mb-2" style="font-size: var(--font-size-md, 12px); letter-spacing: 0.5px;">
+                        Egresos / Gastos
+                    </h6>
+
+                    <h3 id="txtGastos" class="fw-bold mb-4" style="color: #DC2626; font-size: 1.65rem;">
+                        Cargando...
+                    </h3>
+
+                    <div style="position: relative; height: 190px; width: 100%; margin-top: 10px;">
+                        <canvas id="gastosChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Flatpickr JS & Spanish locale -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // Obtener el mes y año actual dinámicamente
+    const fechaActual = new Date();
+    const mesActualNum = fechaActual.getMonth() + 1;
+    const anioActual = fechaActual.getFullYear();
+    const anioAnterior = anioActual - 1;
+
+    // Generar etiquetas dinámicas
+    const nombresMeses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    let labelsDinamicos = [];
+    let mesesMapeo = [];
+
+    labelsDinamicos.push('Dic');
+    mesesMapeo.push({ mes: 12, anio: anioAnterior });
+
+    for (let m = 1; m <= mesActualNum; m++) {
+        labelsDinamicos.push(nombresMeses[m - 1]);
+        mesesMapeo.push({ mes: m, anio: anioActual });
+    }
+
+    const commonOptions = { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        plugins: { legend: { display: false } }, 
+        scales: { y: { display: false }, x: { grid: { display: false } } },
+        onClick: function(event, elements) {
+            if (elements.length > 0) {
+                const index = elements[0].index; 
+                const seleccion = mesesMapeo[index];
+                
+                const mesStr = seleccion.mes.toString().padStart(2, '0');
+                const anioStr = seleccion.anio.toString();
+                const ultimoDia = new Date(seleccion.anio, seleccion.mes, 0).getDate();
+                
+                const fechaInicio = `${anioStr}-${mesStr}-01`;
+                const fechaFin = `${anioStr}-${mesStr}-${ultimoDia}`;
+                const rangoFechas = `${fechaInicio} to ${fechaFin}`;
+                
+                const canvasId = this.canvas.id;
+                const tipoComprobante = canvasId === 'ventasChart' ? 'I' : 'E';
+                
+                window.location.href = `{% url 'facturas' %}?rubro=${tipoComprobante}&fecha=${encodeURIComponent(rangoFechas)}`;
+            }
+        }
+    };
+    
+    const datosIniciales = new Array(labelsDinamicos.length).fill(0);
+
+    const vLine = new Chart(document.getElementById('ventasChart'), { 
+        type: 'line', 
+        options: commonOptions, 
+        data: { 
+            labels: labelsDinamicos, 
+            datasets: [{ 
+                data: [...datosIniciales], 
+                borderColor: '#059669', 
+                backgroundColor: 'rgba(5, 150, 105, 0.04)',
+                fill: true,
+                tension: 0.3,
+                pointHitRadius: 10, 
+                pointHoverRadius: 6 
+            }] 
+        } 
+    });
+    
+    const gLine = new Chart(document.getElementById('gastosChart'), { 
+        type: 'line', 
+        options: commonOptions, 
+        data: { 
+            labels: labelsDinamicos, 
+            datasets: [{ 
+                data: [...datosIniciales], 
+                borderColor: '#DC2626', 
+                backgroundColor: 'rgba(220, 38, 38, 0.04)',
+                fill: true,
+                tension: 0.3,
+                pointHitRadius: 10, 
+                pointHoverRadius: 6 
+            }] 
+        } 
+    });
+
+    function updateChartData(id, dataLabels, dataValues) { 
+        const c = Chart.getChart(id); 
+        if(c) { 
+            c.data.labels = dataLabels;
+            c.data.datasets[0].data = dataValues; 
+            c.update(); 
+        } 
+    }
+
+    async function cargarDatos() {
+        try {
+            const inputFecha = document.getElementById('filtroFecha');
+            let valFecha = inputFecha.value;
+            if (!valFecha && inputFecha && inputFecha._flatpickr) {
+                valFecha = inputFecha._flatpickr.input.value;
+            }
+
+            let url = '/fiscal/api/dashboard-data/';
+            if (valFecha) {
+                url += `?fecha=${encodeURIComponent(valFecha)}`;
+            }
+
+            const response = await fetch(url); 
+            const data = await response.json();
+
+            document.getElementById('txtVentas').innerText = '$' + Number(data.totalVentas || 0).toLocaleString();
+            document.getElementById('txtGastos').innerText = '$' + Number(data.totalGastos || 0).toLocaleString();
+
+            updateChartData('ventasChart', data.labels, data.ventasMensuales);
+            updateChartData('gastosChart', data.labels, data.gastosMensuales);
+
+            const selectRfc = document.getElementById('selectRazonSocial');
+            if (data.razonesSociales && selectRfc) {
+                selectRfc.innerHTML = ''; 
+                data.razonesSociales.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.rfc;
+                    option.textContent = `${item.rfc} (${item.razon_social})`;
+                    selectRfc.appendChild(option);
+                });
+            }
+
+        } catch (error) {
+            console.error("Error al cargar los datos:", error);
+            document.getElementById('txtVentas').innerText = "Error";
+            document.getElementById('txtGastos').innerText = "Error";
+        }
+    }
+
+    function limpiarFiltro() {
+        const inputFecha = document.getElementById('filtroFecha');
+        if (inputFecha && inputFecha._flatpickr) {
+            inputFecha._flatpickr.clear();
+        }
+        inputFecha.value = '';
+        cargarDatos(); 
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const inputFecha = document.getElementById('filtroFecha');
+        if (inputFecha) {
+            flatpickr(inputFecha, {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                locale: "es",
+                altInput: true,
+                altFormat: "d/m/Y",
+                altInputClass: "filter-control w-100",
+                separator: " to ",
+                onChange: function(selectedDates, dateStr, instance) {
+                    inputFecha.value = dateStr;
+                }
+            });
+        }
+        cargarDatos();
+    });
+</script>
+{% endblock %}

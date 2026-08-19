@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Sistema Corporativo{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="icon" type="image/x-icon" href="{% static 'Inicio/img/favicon.ico' %}">
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- 1. Tokens de diseño (Variables) -->
+    <link rel="stylesheet" href="{% static 'Inicio/css/variables.css' %}">
+
+    <!-- 2. Base y Layout -->
+    <link rel="stylesheet" href="{% static 'Inicio/css/scrollbar.css' %}">
+    <link rel="stylesheet" href="{% static 'Inicio/css/base.css' %}">
+
+    <!-- 3. Componentes Globales -->
+    <link rel="stylesheet" href="{% static 'Inicio/css/tabla.css' %}">
+    <link rel="stylesheet" href="{% static 'Inicio/css/componentes.css' %}">
+    <link rel="stylesheet" href="{% static 'Inicio/css/filtros.css' %}">
+    <link rel="stylesheet" href="{% static 'Inicio/css/forms.css' %}">
+    <link rel="stylesheet" href="{% static 'Inicio/css/boton_plus.css' %}">
+    <link rel="stylesheet" href="{% static 'Inicio/css/botones_acciones.css' %}">
+    <link rel="stylesheet" href="{% static 'Inicio/css/modales.css' %}">
+    <link rel="stylesheet" href="{% static 'Inicio/css/messages.css' %}">
+    
+    <!-- Fuentes e Íconos -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- ===== Global Page Loader ===== -->
+<div id="globalLoader" class="global-loader">
+    <div class="loader-content">
+        <div class="loader-logo-wrapper">
+            <img src="{% static 'Inicio/img/LogoPetro.png' %}" alt="Cargando..." class="loader-logo">
+            <div class="loader-spinner"></div>
+        </div>
+        <div class="loader-text">Cargando información...</div>
+    </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ===== Sidebar Expandible ===== -->
+<aside class="sidebar">
+    <div class="sidebar-logo text-center">
+        <img src="{% static 'Inicio/img/LogoPetro.png' %}" alt="Logo" class="logo-img">
+    </div>
+
+    <div class="sidebar-nav">
+        {% url 'inicio:home' as home_url %}
+        <a href="{{ home_url }}" class="nav-item {% if request.path == home_url %}active{% endif %}" title="Inicio">
+            <span class="material-icons nav-icon">home</span>
+            <span class="nav-text">Inicio</span>
+        </a>
+
+        {% for item in menu_modulos %}
+            <div class="sidebar-section-title" title="{{ item.modulo.nombre }}">
+                <span class="section-title-text">{{ item.modulo.nombre }}</span>
+                <span class="section-divider-line"></span>
+            </div>
+
+            {% for sub in item.submodulos %}
+                <a href="{{ sub.obj.url }}" class="nav-item {% if sub.active %}active{% endif %}" title="{{ sub.obj.nombre }}">
+                    <span class="material-icons nav-icon">{{ sub.obj.icono }}</span>
+                    <span class="nav-text">{{ sub.obj.nombre }}</span>
+                </a>
+            {% endfor %}
+        {% endfor %}
+    </div>
+</aside>
+
+<!-- ===== Topbar ===== -->
+<header class="topbar">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-bars d-lg-none me-3" id="toggleSidebar" role="button" aria-label="Abrir menú"></i>
+    </div>
+
+    <div class="d-flex align-items-center ms-auto">
+        <i class="fas fa-bell me-4" role="button" title="Notificaciones"></i>
+
+        <div class="dropdown">
+            <a class="d-flex align-items-center text-decoration-none gap-2 user-dropdown-toggle"
+               data-bs-toggle="dropdown" role="button" aria-expanded="false">
+
+                <div class="user-avatar">
+                    {{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}
+                </div>
+
+                <div class="user-info-text d-none d-md-block">
+                    <div class="user-name">
+                        {{ request.user.get_full_name|default:request.user.username }}
+                    </div>
+                    <div class="user-role">
+                        {% if request.user.profile.empresa_puesto %}
+                            {{ request.user.profile.empresa_puesto.puesto.nombre }}
+                            ·
+                            {{ request.user.profile.empresa_area.area.nombre }}
+                        {% else %}
+                            Sin puesto asignado
+                        {% endif %}
+                    </div>
+
+                </div>
+
+                <i class="fas fa-chevron-down ms-1 text-secondary" style="font-size: 11px;"></i>
+            </a>
+
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                <li>
+                    <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'inicio:perfil' %}">
+                        <i class="fas fa-user text-secondary"></i> Perfil
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item d-flex align-items-center gap-2 text-danger" href="{% url 'inicio:logout' %}">
+                        <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</header>
+
+<!-- ===== Main Content ===== -->
+<main class="main-content">
+
+    <!-- Mensajes Globales Flash -->
+    {% if messages %}
+        <div class="messages-container mb-4" id="messages-container">
+            {% for message in messages %}
+                <div class="alert-message alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Tarjeta Principal del Sistema con Sombra y Volumen -->
+    <div class="main-card">
+
+        <!-- Cabecera de Tarjeta (Breadcrumbs + Títulos del Módulo) -->
+        <div class="main-card-header">
+            
+            <!-- Bloque de Migas de Pan (Breadcrumbs) -->
+            <nav aria-label="breadcrumb" class="card-breadcrumbs">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'inicio:home' %}">
+                            <i class="fas fa-home me-1"></i> Inicio
+                        </a>
+                    </li>
+                    {% block breadcrumbs %}{% endblock %}
+                </ol>
+            </nav>
+
+            <!-- Título y Descripción del Módulo -->
+            <div class="mt-2">
+                <h4 class="mb-1 page-title-header">
+                    {% block page_title %}{% endblock %}
+                </h4>
+                <div class="page-description-text">
+                    {% block page_description %}{% endblock %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Cuerpo de Contenido Principal -->
+        <div class="main-card-body">
+            {% block page_content %}{% endblock %}
+        </div>
+
+    </div>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// ===================================================
+// UTILIDADES GLOBALES DE SISTEMA
+// ===================================================
+
+function mostrarLoader(texto = "Cargando información...") {
+    const loader = document.getElementById("globalLoader");
+    const label = loader ? loader.querySelector(".loader-text") : null;
+    if (label) label.textContent = texto;
+    if (loader) loader.classList.remove("hidden");
+}
+
+function ocultarLoader() {
+    const loader = document.getElementById("globalLoader");
+    if (loader) loader.classList.add("hidden");
+}
+
+window.addEventListener("load", ocultarLoader);
+window.addEventListener("pageshow", ocultarLoader);
+
+function traducirTextoEspanol(texto) {
+    if (!texto) return texto;
+    const meses = {
+        'Jan': 'Ene', 'Feb': 'Feb', 'Mar': 'Mar', 'Apr': 'Abr',
+        'May': 'May', 'Jun': 'Jun', 'Jul': 'Jul', 'Aug': 'Ago',
+        'Sep': 'Sep', 'Oct': 'Oct', 'Nov': 'Nov', 'Dec': 'Dic'
+    };
+    return texto.replace(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, m => meses[m] || m);
+}
+
+function activarSpinnerBoton(btn, textoCarga = "Cargando...") {
+    if (!btn || btn.dataset.cargando === "true") return;
+    btn.dataset.cargando = "true";
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> <span>${textoCarga}</span>`;
+    setTimeout(() => {
+        btn.innerHTML = originalHTML;
+        delete btn.dataset.cargando;
+    }, 4000);
+}
+
+function activarSpinnerItem(item) {
+    const icon = item.querySelector(".item-icon") || item.querySelector("i");
+    if (icon) {
+        icon.className = "spinner-border spinner-border-sm text-secondary fa-fw item-icon";
+    }
+}
+
+function activarSpinnerLink(el) {
+    if (!el || el.dataset.cargando === "true") return;
+    el.dataset.cargando = "true";
+    el.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" style="width: 11px; height: 11px;"></span><span>Cargando...</span>`;
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll('.fecha-es').forEach(function (el) {
+        el.innerText = traducirTextoEspanol(el.innerText);
+    });
+
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+        const currentTitle = el.getAttribute('data-bs-title');
+        if (currentTitle) {
+            el.setAttribute('data-bs-title', traducirTextoEspanol(currentTitle));
+        }
+    });
+
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+            new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+
+    document.addEventListener("click", function (e) {
+        const link = e.target.closest("a");
+        if (!link) return;
+
+        const href = link.getAttribute("href");
+        const isDownload = link.hasAttribute("download") || 
+                           link.getAttribute("target") === "_blank" ||
+                           (href && (
+                               href.startsWith("#") || 
+                               href.startsWith("javascript:") ||
+                               href.includes("descargar") || 
+                               href.includes("download") ||
+                               href.includes("constancia") ||
+                               href.includes("opinion") ||
+                               href.match(/\.(pdf|xlsx|xls|csv|zip|xml)$/i)
+                           ));
+
+        if (isDownload) {
+            ocultarLoader();
+            return;
+        }
+
+        if (href && !href.startsWith("#") && !href.startsWith("javascript:")) {
+            mostrarLoader();
+            setTimeout(ocultarLoader, 4000);
+        }
+    });
+
+    document.addEventListener("submit", function (e) {
+        const form = e.target;
+        const action = form.getAttribute("action") || "";
+        const isDownloadForm = form.getAttribute("target") === "_blank" ||
+                               action.includes("descargar") ||
+                               action.includes("download") ||
+                               action.includes("constancia") ||
+                               action.includes("opinion");
+
+        if (!isDownloadForm) {
+            mostrarLoader();
+            setTimeout(ocultarLoader, 5000);
+        }
+    });
+
+    const messages = document.querySelectorAll(".alert-message");
+    if (messages.length > 0) {
+        setTimeout(() => {
+            messages.forEach(message => {
+                message.style.transition = "opacity 0.6s ease";
+                message.style.opacity = "0";
+                setTimeout(() => message.remove(), 600);
+            });
+        }, 4000);
+    }
+
+    const toggleBtn = document.getElementById("toggleSidebar");
+    const sidebar = document.querySelector(".sidebar");
+    const overlay = document.getElementById("sidebarOverlay");
+
+    if (toggleBtn && sidebar && overlay) {
+        toggleBtn.addEventListener("click", function () {
+            sidebar.classList.toggle("active");
+            overlay.classList.toggle("active");
+        });
+
+        overlay.addEventListener("click", function () {
+            sidebar.classList.remove("active");
+            overlay.classList.remove("active");
+        });
+    }
+});
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

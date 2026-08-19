@@ -1,0 +1,305 @@
+{% extends "Inicio/Base/base.html" %}
+
+{% block title %}Impuestos | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Impuestos</li>
+{% endblock %}
+
+{% block page_content %}
+
+    <!-- 1. Selector de Empresa -->
+    <div class="card-corporate mb-4">
+        <div class="card-corporate-body p-3">
+            <div class="row align-items-center g-2">
+                <div class="col-auto">
+                    <label for="selectEmpresa" class="form-label fw-bold mb-0 text-secondary" style="font-size: 13px;">
+                        <i class="fas fa-building me-1"></i> Empresa:
+                    </label>
+                </div>
+                <div class="col-md-5 col-12">
+                    <select class="form-select form-select-sm filter-select" id="selectEmpresa" onchange="cambiarEmpresa()">
+                        <option value="" selected disabled>Seleccione una empresa...</option>
+                        {% for empresa in razones_sociales %}
+                            <option value="{{ empresa.id }}" {% if empresa_id == empresa.id %}selected{% endif %}>
+                                {{ empresa.razon_social }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Contenedor Principal de Impuestos -->
+    <div id="tablaImpuestos" style="display: none;">
+        
+        <!-- Barra de Acciones y Descargas -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            
+            <div class="d-flex flex-wrap gap-2">
+                <!-- Botón Descargar Declaraciones y DIOTs con Spinner -->
+                {% if empresa_id %}
+                    <button type="button"
+                            id="btnDescargarZip" 
+                            class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1 shadow-sm">
+                        <i class="fas fa-file-zipper"></i>
+                        <span>Declaraciones y DIOTs</span>
+                    </button>
+                {% else %}
+                    <button type="button" 
+                            class="btn btn-outline-primary btn-sm disabled d-inline-flex align-items-center gap-1 shadow-sm">
+                        <i class="fas fa-file-zipper"></i>
+                        <span>Declaraciones y DIOTs</span>
+                    </button>
+                {% endif %}
+
+                {% if empresa_id %}
+                    <a href="{% url 'impuestos_detalle' %}?empresa_id={{ empresa_id }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 shadow-sm">
+                        <i class="fas fa-list-alt"></i>
+                        <span>Impuestos</span>
+                    </a>
+                    <a href="{% url 'saldos_favor' empresa_id=empresa_id %}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 shadow-sm">
+                        <i class="fas fa-wallet"></i>
+                        <span>Saldos a favor remanentes</span>
+                    </a>
+                {% else %}
+                    <a class="btn btn-outline-secondary btn-sm disabled">
+                        <i class="fas fa-list-alt"></i> <span>Impuestos</span>
+                    </a>
+                    <a class="btn btn-outline-secondary btn-sm disabled">
+                        <i class="fas fa-wallet"></i> <span>Saldos a favor remanentes</span>
+                    </a>
+                {% endif %}
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <!-- Botón Opinión de Cumplimiento -->
+                <button id="btnOpinion" 
+                        type="button"
+                        class="btn btn-outline-danger btn-sm disabled d-inline-flex align-items-center gap-1 shadow-sm">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>Opinión de cumplimiento</span>
+                </button>
+
+                <!-- Botón Constancia de Situación Fiscal -->
+                <button id="btnConstancia" 
+                        type="button"
+                        class="btn btn-outline-danger btn-sm disabled d-inline-flex align-items-center gap-1 shadow-sm">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>Constancia de situación fiscal</span>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Tabla de Datos con Encabezado Sticky -->
+        <div class="card-corporate mb-3">
+            <div class="card-corporate-body p-0">
+                <div class="table-responsive-custom table-sticky-header" style="max-height: calc(100vh - 280px); min-height: 480px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0" style="min-width: 1050px;">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Período</th>
+                                <th>Fecha límite</th>
+                                <th class="text-center" style="width: 125px;">Estatus declaración</th>
+                                <th class="text-center" style="width: 115px;">Estatus pago</th>
+                                <th class="text-center" style="width: 115px;">Estatus DIOT</th>
+                                <th class="text-end">A pagar</th>
+                                <th class="text-end">Pagado</th>
+                                <th class="text-end">Por pagar</th>
+                                <th class="text-end">A favor acreditable</th>
+                                <th class="text-end pe-3">A favor compensable</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in periodos %}
+                                <tr>
+                                    <td class="ps-3 fw-bold">
+                                        <a href="{% url 'declaraciones_periodo' empresa_id=p.razon_social_id anio=p.anio mes=p.mes|default:0 %}" class="text-decoration-none text-primary" onclick="activarSpinnerLink(this)">
+                                            {% if p.mes %}
+                                                {{ p.periodo }} {{ p.anio }}
+                                            {% else %}
+                                                {{ p.anio }}
+                                            {% endif %}
+                                        </a>
+                                    </td>
+
+                                    <!-- Fecha límite -->
+                                    <td class="text-muted fecha-es">
+                                        {{ p.fecha_limite|date:"d M Y"|default:"—" }}
+                                    </td>
+
+                                    <!-- Estatus Declaración -->
+                                    <td class="text-center">
+                                        {% if p.fecha_presentacion_declaracion %}
+                                            <span class="status-icon-circle status-success" 
+                                                  data-bs-toggle="tooltip" 
+                                                  data-bs-placement="top" 
+                                                  data-bs-title="Presentada: {{ p.fecha_presentacion_declaracion|date:'d M Y' }}">
+                                                <i class="fas fa-check"></i>
+                                            </span>
+                                        {% else %}
+                                            <span class="status-icon-circle status-pending" 
+                                                  data-bs-toggle="tooltip" 
+                                                  data-bs-placement="top" 
+                                                  data-bs-title="Pendiente">
+                                                <i class="far fa-clock"></i>
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Estatus Pago -->
+                                    <td class="text-center">
+                                        {% if p.fecha_pago %}
+                                            <span class="status-icon-circle status-success" 
+                                                  data-bs-toggle="tooltip" 
+                                                  data-bs-placement="top" 
+                                                  data-bs-title="Pagado: {{ p.fecha_pago|date:'d M Y' }}">
+                                                <i class="fas fa-check"></i>
+                                            </span>
+                                        {% elif p.a_pagar and p.a_pagar > 0 %}
+                                            <span class="status-icon-circle status-warning" 
+                                                  data-bs-toggle="tooltip" 
+                                                  data-bs-placement="top" 
+                                                  data-bs-title="Por pagar">
+                                                <i class="fas fa-exclamation"></i>
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted" 
+                                                  data-bs-toggle="tooltip" 
+                                                  data-bs-placement="top" 
+                                                  data-bs-title="Sin obligación de pago">—</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Estatus DIOT -->
+                                    <td class="text-center">
+                                        {% if p.fecha_presentacion_diot %}
+                                            <span class="status-icon-circle status-success" 
+                                                  data-bs-toggle="tooltip" 
+                                                  data-bs-placement="top" 
+                                                  data-bs-title="Presentada: {{ p.fecha_presentacion_diot|date:'d M Y' }}">
+                                                <i class="fas fa-check"></i>
+                                            </span>
+                                        {% else %}
+                                            <span class="status-icon-circle status-pending" 
+                                                  data-bs-toggle="tooltip" 
+                                                  data-bs-placement="top" 
+                                                  data-bs-title="Pendiente">
+                                                <i class="far fa-clock"></i>
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Importes -->
+                                    <td class="text-end fw-semibold text-dark">{{ p.a_pagar_fmt }}</td>
+                                    <td class="text-end text-success fw-semibold">{{ p.pagado_fmt }}</td>
+                                    <td class="text-end text-danger fw-semibold">{{ p.por_pagar_fmt }}</td>
+                                    <td class="text-end text-secondary">{{ p.a_favor_acreditable_fmt }}</td>
+                                    <td class="text-end pe-3 text-secondary">{{ p.a_favor_compensable_fmt }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="10" class="text-center text-muted py-5">
+                                        <div class="d-flex flex-column align-items-center justify-content-center gap-2">
+                                            <i class="fas fa-folder-open fa-2x text-secondary opacity-50"></i>
+                                            <span>No hay información fiscal registrada para esta empresa.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function ejecutarDescargaConSpinner(btn, url, nombreFallback = "documento.zip") {
+        if (!url || btn.classList.contains("disabled") || btn.dataset.cargando === "true") return;
+
+        btn.dataset.cargando = "true";
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> <span>Generando...</span>`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Error en la respuesta del servidor");
+
+            let nombreDescarga = nombreFallback;
+            const disposition = response.headers.get('Content-Disposition');
+            if (disposition && disposition.indexOf('filename=') !== -1) {
+                const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+                if (matches != null && matches[1]) {
+                    nombreDescarga = matches[1].replace(/['"]/g, '');
+                }
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = nombreDescarga;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+
+        } catch (error) {
+            console.error("Error al descargar:", error);
+            alert("No se pudo generar el archivo. Por favor intente nuevamente.");
+        } finally {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+            delete btn.dataset.cargando;
+        }
+    }
+
+    function cambiarEmpresa() {
+        const empresaId = document.getElementById("selectEmpresa").value;
+        if (empresaId) {
+            window.location.href = `/fiscal/impuestos/?empresa_id=${empresaId}`;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const empresaId = "{{ empresa_id|default:'' }}";
+
+        if (empresaId) {
+            document.getElementById("tablaImpuestos").style.display = "block";
+
+            const btnOpinion = document.getElementById("btnOpinion");
+            const btnConstancia = document.getElementById("btnConstancia");
+            const btnDescargarZip = document.getElementById("btnDescargarZip");
+
+            if (btnDescargarZip) {
+                btnDescargarZip.onclick = function () {
+                    const urlZip = "{% url 'descargar_zip_declaraciones_diots' empresa_id=empresa_id|default:0 %}";
+                    ejecutarDescargaConSpinner(btnDescargarZip, urlZip, `Declaraciones_DIOTs_${empresaId}.zip`);
+                };
+            }
+
+            if (btnOpinion) {
+                btnOpinion.onclick = function () {
+                    ejecutarDescargaConSpinner(btnOpinion, `/fiscal/impuestos/opinion/${empresaId}/`, `Opinion_Cumplimiento_${empresaId}.pdf`);
+                };
+                btnOpinion.classList.remove("disabled");
+            }
+
+            if (btnConstancia) {
+                btnConstancia.onclick = function () {
+                    ejecutarDescargaConSpinner(btnConstancia, `/fiscal/impuestos/constancia/${empresaId}/`, `Constancia_Situacion_${empresaId}.pdf`);
+                };
+                btnConstancia.classList.remove("disabled");
+            }
+        }
+    });
+</script>
+{% endblock %}

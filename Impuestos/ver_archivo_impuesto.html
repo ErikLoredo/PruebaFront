@@ -1,0 +1,113 @@
+{% extends "Inicio/Base/base.html" %}
+
+{% block title %}Visualizar archivo | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item">
+        <a href="{% url 'impuestos' %}?empresa_id={{ archivo.razon_social_id }}">Impuestos</a>
+    </li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'declaraciones_periodo' empresa_id=archivo.razon_social_id anio=archivo.anio mes=archivo.mes|default:0 %}">
+            Declaración {{ archivo.periodo }} {{ archivo.anio }}
+        </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">
+        No. de Operación #{{ archivo.numero_operacion }}
+    </li>
+{% endblock %}
+
+{% block page_content %}
+
+    <!-- 1. Toolbar de Información y Acciones del Archivo -->
+    <div class="card-corporate mb-3">
+        <div class="card-corporate-body p-3">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                
+                <!-- Información del Archivo -->
+                <div class="d-flex flex-column gap-1">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-file-pdf text-danger fa-lg"></i>
+                        <h6 class="mb-0 text-dark fw-bold" style="font-size: 15px;">
+                            {{ archivo.nombre_archivo }}
+                        </h6>
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-1 text-muted mt-1" style="font-size: 12px;">
+                        <span class="meta-badge">
+                            <i class="fas fa-hashtag text-secondary"></i> Op: {{ archivo.numero_operacion }}
+                        </span>
+                        <span class="meta-badge">
+                            <i class="fas fa-tag text-secondary"></i> {{ archivo.tipo_declaracion|default:"—" }}
+                        </span>
+                        <span class="meta-badge">
+                            <i class="far fa-calendar-alt text-secondary"></i> {{ archivo.periodo }} {{ archivo.anio }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" 
+                            id="btnDescargarArchivo"
+                            class="btn btn-primary-custom btn-sm d-inline-flex align-items-center gap-1 shadow-sm px-3"
+                            onclick="descargarArchivoConSpinner(this, '{{ descargar_url }}', '{{ archivo.nombre_archivo }}')">
+                        <i class="fas fa-download"></i>
+                        <span>Descargar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Visor PDF Frame Integrado -->
+    <div class="pdf-frame-card shadow-sm">
+        <iframe class="pdf-frame" src="{{ pdf_url }}#view=FitH&zoom=page-width" title="{{ archivo.nombre_archivo }}">
+        </iframe>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function descargarArchivoConSpinner(btn, url, fallbackName = "documento.pdf") {
+        if (!url || btn.disabled || btn.dataset.cargando === "true") return;
+
+        btn.dataset.cargando = "true";
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> <span>Descargando...</span>`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Error al descargar");
+
+            let nombreFinal = fallbackName;
+            const disposition = response.headers.get('Content-Disposition');
+            if (disposition && disposition.indexOf('filename=') !== -1) {
+                const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+                if (matches != null && matches[1]) {
+                    nombreFinal = matches[1].replace(/['"]/g, '');
+                }
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = nombreFinal;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+
+        } catch (error) {
+            console.error("Error en descarga:", error);
+            window.location.href = url;
+        } finally {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+            delete btn.dataset.cargando;
+        }
+    }
+</script>
+{% endblock %}

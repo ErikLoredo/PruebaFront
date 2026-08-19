@@ -1,0 +1,83 @@
+
+/* =========================
+   Botones de acciones (tablas)
+   ========================= */
+
+.btn-action {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    border: 1px solid transparent;
+    background-color: #FFFFFF;
+    color: #4E4E4C;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    margin-left: 6px;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    text-decoration: none; 
+
+}
+
+.btn-action i {
+    font-size: 14px;
+}
+
+/* Hover base */
+.btn-action:hover {
+    transform: scale(1.08);
+}
+
+/* =========================
+   Tipos de acción
+   ========================= */
+
+
+/* Ver */
+.btn-action.view:hover {
+    background-color: #DB6643;
+    color: #ffffff;
+
+}
+
+
+/* Editar */
+.btn-action.edit:hover {
+    background-color: #DB6643;
+    color: #FFFFFF;
+}
+
+/* Eliminar */
+.btn-action.delete:hover {
+    background-color: #DF4313;
+    color: #FFFFFF;
+}
+
+/* =========================
+   Tooltip
+   ========================= */
+
+.btn-action::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 110%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #FFFFFF;
+    color: #4E4E4C;
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.btn-action:hover::after {
+    opacity: 1;
+}

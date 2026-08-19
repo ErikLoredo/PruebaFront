@@ -1,0 +1,124 @@
+/* ===================================================
+   SISTEMA CORPORATIVO - BARRA DE FILTROS & PAGINACIÓN
+   =================================================== */
+
+.filters-bar {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.filters-bar .btn-plus {
+    margin-left: auto;
+}
+
+/* Inputs y selects de filtro */
+.filter-control {
+    height: 38px;
+    border: 1px solid var(--color-border, #E5E7EB);
+    border-radius: var(--border-radius-sm, 6px);
+    padding: 6px 10px;
+    font-size: var(--font-size-base, 13px);
+    color: var(--color-text-dark, #1F2937);
+    background-color: var(--color-white, #FFFFFF);
+    outline: none;
+    transition: border-color var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
+}
+
+.filter-control:focus {
+    border-color: var(--color-orange-500, #ff6115);
+    box-shadow: 0 0 0 2px var(--color-orange-100, rgba(255, 97, 21, 0.15));
+}
+
+.filter-search {
+    min-width: 220px;
+}
+
+.filter-select {
+    min-width: 180px;
+}
+
+/* --- Botones de filtros --- */
+.filter-apply {
+    height: 38px;
+    padding: 0 16px;
+    border: 1px solid var(--color-orange-500, #ff6115);
+    border-radius: var(--border-radius-sm, 6px);
+    background-color: var(--color-orange-500, #ff6115);
+    color: var(--color-white, #FFFFFF);
+    font-size: var(--font-size-base, 13px);
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background-color var(--transition-fast, 0.2s ease), border-color var(--transition-fast, 0.2s ease), transform var(--transition-fast, 0.15s ease);
+}
+
+.filter-apply:hover {
+    background-color: var(--color-orange-600, #f04206);
+    border-color: var(--color-orange-600, #f04206);
+    transform: translateY(-1px);
+}
+
+.filter-apply:active {
+    background-color: var(--color-orange-700, #c72f07);
+    transform: scale(0.98);
+}
+
+.filter-clear-btn {
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--color-border, #E5E7EB);
+    border-radius: var(--border-radius-sm, 6px);
+    background-color: var(--color-white, #FFFFFF);
+    color: var(--color-text-main, #4E4E4C);
+    font-size: var(--font-size-base, 13px);
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color var(--transition-fast, 0.2s ease), border-color var(--transition-fast, 0.2s ease), color var(--transition-fast, 0.2s ease);
+}
+
+.filter-clear-btn:hover {
+    background-color: var(--color-orange-50, #fff5ed);
+    border-color: var(--color-orange-300, #ffad70);
+    color: var(--color-orange-600, #f04206);
+}
+
+/* ===================================================
+   Paginación Corporativa
+   =================================================== */
+.pagination {
+    --bs-pagination-color: var(--color-text-main, #4E4E4C);
+    --bs-pagination-bg: var(--color-white, #FFFFFF);
+    --bs-pagination-border-color: var(--color-border, #E5E7EB);
+
+    --bs-pagination-hover-color: var(--color-white, #FFFFFF);
+    --bs-pagination-hover-bg: var(--color-orange-400, #ff8037);
+    --bs-pagination-hover-border-color: var(--color-orange-400, #ff8037);
+
+    --bs-pagination-active-color: var(--color-white, #FFFFFF);
+    --bs-pagination-active-bg: var(--color-orange-500, #ff6115);
+    --bs-pagination-active-border-color: var(--color-orange-500, #ff6115);
+
+    --bs-pagination-disabled-color: var(--color-text-muted, #9CA3AF);
+    --bs-pagination-disabled-bg: var(--color-white, #FFFFFF);
+    --bs-pagination-disabled-border-color: var(--color-border, #E5E7EB);
+}
+
+.pagination .page-link {
+    font-size: var(--font-size-base, 13px);
+    border-radius: var(--border-radius-sm, 6px);
+    margin: 0 2px;
+    padding: 6px 12px;
+}
+
+.pagination .page-item.active .page-link {
+    font-weight: 600;
+}

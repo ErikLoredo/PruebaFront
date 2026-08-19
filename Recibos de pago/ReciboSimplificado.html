@@ -1,0 +1,173 @@
+{% extends "Inicio/Base/base.html" %}
+
+{% block title %}Recibo de Pago | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'recibos-pago' %}">Recibos de pago</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ serie_folio|default:"Recibo" }}</li>
+{% endblock %}
+
+{% block page_content %}
+
+    <!-- 1. Barra de Acción / Regresar
+    <div class="d-flex justify-content-end mb-3">
+        {% if factura_origen_id %}
+            <a href="{% url 'detalle_factura' factura_origen_id %}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 shadow-sm px-3">
+                <i class="fas fa-arrow-left"></i>
+                <span>Regresar</span>
+            </a>
+        {% else %}
+            <button type="button" onclick="history.back()" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 shadow-sm px-3">
+                <i class="fas fa-arrow-left"></i>
+                <span>Regresar</span>
+            </button>
+        {% endif %}
+    </div> -->
+
+    <!-- 2. Cabecera del Emisor y Calendario -->
+    <div class="card-corporate mb-4">
+        <div class="card-corporate-body p-4">
+            <div class="row align-items-center g-3">
+                <div class="col-12 col-md-8">
+                    <h4 class="fw-bold text-dark mb-1" style="font-size: 1.25rem;">
+                        {{ pago_cfdi.emisor_nombre|default:"Emisor no especificado" }}
+                    </h4>
+                    <div class="text-secondary" style="font-size: 13px;">
+                        Comprobante Fiscal Digital por Internet (Pago)
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4 text-md-end text-start">
+                    <div class="card-corporate d-inline-block text-center p-2 mb-0 shadow-sm" style="min-width: 140px; background-color: var(--color-bg-subtle);">
+                        <small class="text-muted d-block fw-bold" style="font-size: 11px; letter-spacing: 0.5px;">
+                            {{ serie_folio|default:"RECIBO" }}
+                        </small>
+                        <div class="border-top border-bottom my-1 py-1 bg-white rounded-1">
+                            <span class="text-uppercase text-primary d-block fw-bold" style="font-size: 11px;">
+                                {% with mes=pago_cfdi.fecha_timbrado|date:"m" %}
+                                    {% if mes == "01" %}ENE
+                                    {% elif mes == "02" %}FEB
+                                    {% elif mes == "03" %}MAR
+                                    {% elif mes == "04" %}ABR
+                                    {% elif mes == "05" %}MAY
+                                    {% elif mes == "06" %}JUN
+                                    {% elif mes == "07" %}JUL
+                                    {% elif mes == "08" %}AGO
+                                    {% elif mes == "09" %}SEP
+                                    {% elif mes == "10" %}OCT
+                                    {% elif mes == "11" %}NOV
+                                    {% elif mes == "12" %}DIC
+                                    {% endif %}
+                                {% endwith %}
+                            </span>
+                            <span class="fs-4 fw-bold text-dark d-block" style="line-height: 1.1;">
+                                {{ pago_cfdi.fecha_timbrado|date:"d" }}
+                            </span>
+                            <span class="text-muted d-block" style="font-size: 11px;">
+                                {{ pago_cfdi.fecha_timbrado|date:"Y" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Estructura de 2 Columnas Original (Tabla a la izquierda, Archivos a la derecha) -->
+    <div class="row g-4 mb-4">
+        
+        <!-- Columna Izquierda: Tabla Detalle de Pagos -->
+        <div class="col-12 col-lg-8 col-xl-9">
+            <h5 class="fw-bold text-dark mb-3" style="font-size: 15px;">Detalle de pagos</h5>
+            
+            <div class="card-corporate mb-0">
+                <div class="card-corporate-body p-0">
+                    <div class="table-responsive-custom">
+                        <table class="table table-hover align-middle mb-0" style="min-width: 650px;">
+                            <thead>
+                                <tr>
+                                    <th class="ps-3">Fecha</th>
+                                    <th>Moneda</th>
+                                    <th>Forma de pago</th>
+                                    <th class="text-end">Monto (orig.)</th>
+                                    <th class="text-end pe-3">Monto (MXN)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in pagos_resumen %}
+                                <tr>
+                                    <td class="ps-3 fw-bold">
+                                        <a href="{% url 'detalle_recibo_pago' pago_cfdi.id %}?from_factura={{ factura_origen_id }}" class="text-decoration-none text-primary" onclick="activarSpinnerLink(this)">
+                                            {{ p.fecha_pago|date:"Y-m-d" }}
+                                        </a>
+                                    </td>
+                                    <td class="text-secondary">{{ p.moneda }}</td>
+                                    <td class="text-secondary">{{ p.forma_pago }}</td>
+                                    <td class="text-end text-secondary fw-semibold">
+                                        ${{ pago_cfdi.pagos_totales_monto_total_pagos|floatformat:2|default:p.monto_orig }}
+                                    </td>
+                                    <td class="text-end pe-3 font-monospace fw-bold text-dark">
+                                        ${{ pago_cfdi.pagos_totales_monto_total_pagos|floatformat:2|default:p.monto_mxn }}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        No se encontraron registros de pagos.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Tarjeta de Archivos Original -->
+        <div class="col-12 col-lg-4 col-xl-3">
+            <div class="card-corporate">
+                <div class="card-corporate-body p-3">
+                    <h6 class="fw-bold text-muted text-uppercase mb-2" style="font-size: 11px; letter-spacing: 0.5px;">Archivos</h6>
+                    <hr class="mt-1 mb-3">
+
+                    <div class="text-center mb-3">
+                        <small class="text-muted text-truncate d-block font-monospace" style="font-size: 11px;" title="{{ pago_cfdi.uuid }}.xml">
+                            {{ pago_cfdi.uuid }}.xml
+                        </small>
+                    </div>
+
+                    <div class="d-flex flex-column gap-2">
+                        <a href="{% url 'descargar_xml' pago_cfdi.uuid %}" class="btn btn-sm btn-outline-danger w-100 d-inline-flex align-items-center justify-content-center gap-2 shadow-sm text-decoration-none">
+                            <i class="far fa-file-code"></i>
+                            <span>Descargar XML</span>
+                        </a>
+
+                        <a href="{% url 'generar_pdf_recibo_pago' pago_cfdi.id %}" target="_blank" class="btn btn-sm btn-outline-danger w-100 d-inline-flex align-items-center justify-content-center gap-2 shadow-sm text-decoration-none">
+                            <i class="far fa-file-pdf"></i>
+                            <span>Descargar PDF</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 4. Acordeón Más Detalles -->
+    <div class="mb-3">
+        <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#masDetalles" aria-expanded="false" aria-controls="masDetalles">
+            <i class="fas fa-info-circle"></i>
+            <span>Más detalles</span>
+        </button>
+
+        <div class="collapse mt-2" id="masDetalles">
+            <div class="card-corporate p-3 mb-0">
+                <ul class="list-unstyled mb-0" style="font-size: 13px;">
+                    <li><span class="text-secondary">Folio:</span> <strong class="text-dark font-monospace">{{ pago_cfdi.uuid }}</strong></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

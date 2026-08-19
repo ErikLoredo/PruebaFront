@@ -1,0 +1,272 @@
+
+/* =========================
+   Formulario base
+   ========================= */
+
+.form-section {
+    background: #FFFFFF;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+/* =========================
+   Labels
+   ========================= */
+
+.form-label {
+    display: block;
+    font-size: 0.8rem;
+    color: #6B7280;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+/* =========================
+   Inputs / Selects
+   ========================= */
+
+.form-control,
+.form-select {
+    width: 100%;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    color: #1F2937;
+    background-color: #FFFFFF;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Focus */
+.form-control:focus,
+.form-select:focus {
+    outline: none;
+    border-color: #DF4313;
+    box-shadow: 0 0 0 2px rgba(223, 67, 19, 0.1);
+}
+
+/* Disabled */
+.form-control:disabled,
+.form-select:disabled {
+    background-color: #F9FAFB;
+    cursor: not-allowed;
+}
+
+/* =========================
+   Agrupación
+   ========================= */
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+/* =========================
+   Títulos de sección
+   ========================= */
+
+.form-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #4E4E4C;
+    margin-bottom: 15px;
+}
+
+/* =========================
+   Errores
+   ========================= */
+
+.form-error {
+    font-size: 0.75rem;
+    color: #DC2626;
+    margin-top: 4px;
+}
+
+/* =========================
+   Estados inválidos
+   ========================= */
+
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: #DC2626;
+}
+
+/* =========================
+   Botones (opcional)
+   ========================= */
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 25px;
+    gap: 10px;
+}
+
+
+
+/* Icon inside input */
+.input-icon {
+    position: relative;
+}
+
+.input-icon i {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9CA3AF;
+}
+
+.input-icon input {
+    padding-left: 35px;
+}
+
+/* Hover + focus animation */
+.form-control:focus {
+    transform: scale(1.01);
+}
+
+/* Spinner button alignment */
+button .spinner-border {
+    width: 14px;
+    height: 14px;
+}
+
+
+.form-control.is-invalid {
+    border-color: #DC2626;
+    background-color: #FEF2F2;
+}
+
+
+
+/* =========================
+   Botones formulario
+   ========================= */
+
+.btn-form {
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* =========================
+   Botón primario (Guardar)
+   ========================= */
+
+.btn-primary-custom {
+    background-color: #DF4313;
+    color: #FFFFFF;
+}
+
+.btn-primary-custom:hover {
+    background-color: #DB6643;
+    transform: translateY(-1px);
+}
+
+.btn-primary-custom:active {
+    background-color: #DA5026;
+    transform: scale(0.98);
+}
+
+/* Disabled */
+.btn-primary-custom:disabled {
+    background-color: #FCA58F;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* =========================
+   Botón secundario (Cancelar)
+   ========================= */
+
+.btn-secondary-custom {
+    background-color: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    color: #4E4E4C;
+    text-decoration: none;
+}
+
+.btn-secondary-custom:hover {
+    background-color: #F9FAFB;
+    color: #DA5026;
+}
+
+/* =========================
+   Spinner dentro del botón
+   ========================= */
+
+.btn-form .spinner-border {
+    width: 14px;
+    height: 14px;
+}
+
+
+
+.form-label.required::after {
+    content: " *";
+    color: #DC2626;
+}
+
+
+.form-control.is-valid {
+    border-color: #16A34A;
+    background-color: #ECFDF5;
+}
+
+
+
+/* =========================
+   Módulos checkbox
+   ========================= */
+
+   
+.module-parent {
+    grid-column: 1 / -1;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #9CA3AF;
+    margin-top: 10px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+
+.modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.module-item {
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.module-item:hover {
+    border-color: #DF4313;
+    background: #FFF5F2;
+}
+
+.module-item input {
+    cursor: pointer;
+}
+
+.module-item i {
+    font-size: 18px;
+    color: #DF4313;
+}

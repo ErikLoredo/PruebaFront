@@ -1,0 +1,230 @@
+{% extends "Inicio/Base/base.html" %}
+
+{% block title %}Declaraciones | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'impuestos' %}?empresa_id={{ empresa_id }}">Impuestos</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Declaracion {{ periodo }} {{ anio }}</li>
+{% endblock %}
+
+{% block page_content %}
+
+    <!-- 2. SECCIÓN: Declaraciones -->
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <h5 class="fw-bold text-dark mb-0" style="font-size: 15px;">Declaraciones</h5>
+    </div>
+
+    {% if declaraciones %}
+        <div class="card-corporate mb-4">
+            <div class="card-corporate-body p-0">
+                <div class="table-responsive-custom">
+                    <table class="table table-hover align-middle mb-0" style="min-width: 1050px;">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">No. de Operación</th>
+                                <th>Tipo</th>
+                                <th>Línea de captura</th>
+                                <th class="text-center" style="width: 120px;">Estatus declaración</th>
+                                <th class="text-center" style="width: 110px;">Estatus pago</th>
+                                <th class="text-center">Fecha límite de pago</th>
+                                <th class="text-end">A pagar</th>
+                                <th class="text-end">Acreditable</th>
+                                <th class="text-end">Compensable</th>
+                                <th class="text-end pe-3">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in declaraciones %}
+                                <tr>
+                                    <!-- No. de Operación -->
+                                    <td class="ps-3 fw-bold">
+                                        <a href="{% url 'detalle_declaracion' declaracion_id=d.impuesto_declaracion_id %}" 
+                                           class="text-decoration-none text-primary"
+                                           onclick="activarSpinnerLink(this)">
+                                            {{ d.numero_operacion }}
+                                        </a>
+                                    </td>
+
+                                    <!-- Tipo -->
+                                    <td>
+                                        <span class="text-secondary">{{ d.tipo_declaracion|default:"—" }}</span>
+                                    </td>
+
+                                    <!-- Línea de captura -->
+                                    <td class="font-monospace text-dark">
+                                        {{ d.linea_captura|default:"—" }}
+                                    </td>
+
+                                    <!-- Estatus Declaración -->
+                                    <td class="text-center">
+                                        {% if d.fecha_presentacion %}
+                                            <span class="status-icon-circle status-success" 
+                                                  data-bs-toggle="tooltip" 
+                                                  data-bs-placement="top" 
+                                                  data-bs-title="Presentada: {{ d.fecha_presentacion|date:'d M Y' }}">
+                                                <i class="fas fa-check"></i>
+                                            </span>
+                                        {% else %}
+                                            <span class="status-icon-circle status-pending" 
+                                                  data-bs-toggle="tooltip" 
+                                                  data-bs-placement="top" 
+                                                  data-bs-title="Pendiente">
+                                                <i class="far fa-clock"></i>
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Estatus Pago -->
+                                    <td class="text-center">
+                                        {% if d.fecha_pago %}
+                                            <span class="status-icon-circle status-success" 
+                                                  data-bs-toggle="tooltip" 
+                                                  data-bs-placement="top" 
+                                                  data-bs-title="Pagado: {{ d.fecha_pago|date:'d M Y' }}">
+                                                <i class="fas fa-check"></i>
+                                            </span>
+                                        {% elif d.a_pagar and d.a_pagar > 0 %}
+                                            <span class="status-icon-circle status-warning" 
+                                                  data-bs-toggle="tooltip" 
+                                                  data-bs-placement="top" 
+                                                  data-bs-title="Por pagar">
+                                                <i class="fas fa-exclamation"></i>
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted" 
+                                                  data-bs-toggle="tooltip" 
+                                                  data-bs-placement="top" 
+                                                  data-bs-title="Sin obligación de pago">—</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Fecha límite de pago -->
+                                    <td class="text-center text-muted fecha-es">
+                                        {{ d.fecha_limite_pago|date:"d M Y"|default:"—" }}
+                                    </td>
+
+                                    <!-- Montos -->
+                                    <td class="text-end fw-semibold text-dark">{{ d.a_pagar_fmt }}</td>
+                                    <td class="text-end text-secondary">{{ d.acreditable_fmt }}</td>
+                                    <td class="text-end text-secondary">{{ d.compensable_fmt }}</td>
+
+                                    <!-- Dropdown Archivos -->
+                                    <td class="text-end pe-3">
+                                        <div class="dropdown d-inline-block table-actions-dropdown">
+                                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle shadow-sm d-inline-flex align-items-center gap-1" 
+                                                    type="button" 
+                                                    data-bs-toggle="dropdown" 
+                                                    data-bs-boundary="viewport"
+                                                    data-bs-popper-config='{"strategy":"fixed"}'
+                                                    aria-expanded="false">
+                                                <i class="far fa-folder-open"></i>
+                                                <span>Archivos</span>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end border-0 shadow">
+                                                {% if d.archivo_hoja_trabajo_id %}
+                                                    <li>
+                                                        <a class="dropdown-item d-flex align-items-center gap-2" 
+                                                           href="{% url 'ver_archivo_impuesto' archivo_id=d.archivo_hoja_trabajo_id %}"
+                                                           onclick="activarSpinnerItem(this)">
+                                                            <i class="far fa-file-pdf text-danger fa-fw item-icon"></i> 
+                                                            <span>Hoja de trabajo</span>
+                                                        </a>
+                                                    </li>
+                                                {% endif %}
+                                                {% if d.archivo_acuse_id %}
+                                                    <li>
+                                                        <a class="dropdown-item d-flex align-items-center gap-2" 
+                                                           href="{% url 'ver_archivo_impuesto' archivo_id=d.archivo_acuse_id %}"
+                                                           onclick="activarSpinnerItem(this)">
+                                                            <i class="far fa-file-pdf text-danger fa-fw item-icon"></i> 
+                                                            <span>Acuse de recibo</span>
+                                                        </a>
+                                                    </li>
+                                                {% endif %}
+                                                {% if d.archivo_comprobante_pago_id %}
+                                                    <li>
+                                                        <a class="dropdown-item d-flex align-items-center gap-2" 
+                                                           href="{% url 'ver_archivo_impuesto' archivo_id=d.archivo_comprobante_pago_id %}"
+                                                           onclick="activarSpinnerItem(this)">
+                                                            <i class="far fa-file-pdf text-danger fa-fw item-icon"></i> 
+                                                            <span>Comprobante de pago</span>
+                                                        </a>
+                                                    </li>
+                                                {% endif %}
+                                                {% if not d.archivo_hoja_trabajo_id and not d.archivo_acuse_id and not d.archivo_comprobante_pago_id %}
+                                                    <li><span class="dropdown-item text-muted disabled">Sin archivos adjuntos</span></li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="card-corporate mb-4">
+            <div class="card-corporate-body text-center py-4 text-muted">
+                <i class="fas fa-folder-open fa-2x text-secondary opacity-50 mb-2"></i>
+                <div>No existen declaraciones registradas para este período.</div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- 3. SECCIÓN: DIOTs -->
+    <div class="d-flex align-items-center gap-2 mb-2 mt-4">
+        <h5 class="fw-bold text-dark mb-0" style="font-size: 15px;">DIOTs</h5>
+    </div>
+
+    {% if diots %}
+        <div class="card-corporate mb-4">
+            <div class="card-corporate-body p-0">
+                <div class="table-responsive-custom">
+                    <table class="table table-hover align-middle mb-0" style="min-width: 600px;">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Folio</th>
+                                <th>Tipo</th>
+                                <th>Fecha de presentación</th>
+                                <th class="text-end pe-3">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for diot in diots %}
+                                <tr>
+                                    <td class="ps-3 fw-bold text-dark">{{ diot.folio }}</td>
+                                    <td class="text-secondary">{{ diot.tipo|default:"—" }}</td>
+                                    <td class="text-muted fecha-es">{{ diot.fecha_presentacion|date:"d M Y"|default:"—" }}</td>
+                                    
+                                    <!-- Botón Ver recibo -->
+                                    <td class="text-end pe-3">
+                                        {% if diot.archivo_id %}
+                                            <a href="{% url 'ver_archivo_diot' archivo_id=diot.archivo_id %}" 
+                                               class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1 shadow-sm px-2 py-1"
+                                               onclick="activarSpinnerBoton(this, 'Cargando...')">
+                                                <i class="far fa-file-pdf"></i>
+                                                <span>Ver recibo</span>
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="card-corporate mb-4">
+            <div class="card-corporate-body text-center py-4 text-muted">
+                <i class="fas fa-folder-open fa-2x text-secondary opacity-50 mb-2"></i>
+                <div>No existen DIOTs registradas para este período.</div>
+            </div>
+        </div>
+    {% endif %}
+
+{% endblock %}

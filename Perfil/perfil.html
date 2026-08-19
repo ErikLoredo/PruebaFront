@@ -1,0 +1,137 @@
+{% extends "Inicio/Base/base.html" %}
+{% load static %}
+
+{% block title %}Mi Perfil | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Mi Perfil</li>
+{% endblock %}
+
+{% block page_title %}Mi Perfil{% endblock %}
+{% block page_description %}Información de tu cuenta y datos organizacionales.{% endblock %}
+
+{% block page_content %}
+
+<!-- 1. Cabecera / Header del Usuario -->
+<div class="card-corporate mb-4">
+    <div class="card-corporate-body p-3 p-md-4">
+        <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+            
+            <div class="d-flex align-items-center gap-3">
+                <div class="user-avatar" style="width: 52px; height: 52px; font-size: 1.2rem;">
+                    {{ usuario.first_name|slice:":1" }}{{ usuario.last_name|slice:":1" }}
+                </div>
+                <div>
+                    <h5 class="fw-bold text-dark mb-1" style="font-size: 16px;">
+                        {{ usuario.get_full_name|default:usuario.username }}
+                    </h5>
+                    <div class="text-secondary" style="font-size: 13px;">
+                        <i class="fas fa-briefcase me-1 text-muted"></i>
+                        {{ perfil.puesto_fk.nombre|default:"Sin puesto asignado" }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Badges de Estado General -->
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                {% if perfil.cuenta_activa %}
+                    <span class="badge" style="background-color: var(--color-success-bg); color: var(--color-success-text); border: 1px solid var(--color-success-border); font-size: 12px; padding: 6px 12px;">
+                        <i class="fas fa-check-circle me-1"></i> Cuenta activa
+                    </span>
+                {% else %}
+                    <span class="badge" style="background-color: var(--color-danger-bg); color: var(--color-danger-text); border: 1px solid var(--color-danger-border); font-size: 12px; padding: 6px 12px;">
+                        <i class="fas fa-times-circle me-1"></i> Cuenta inactiva
+                    </span>
+                {% endif %}
+
+                {% if perfil.email_verificado %}
+                    <span class="badge" style="background-color: var(--color-info-bg); color: var(--color-info-text); border: 1px solid var(--color-info-border); font-size: 12px; padding: 6px 12px;">
+                        <i class="fas fa-shield-alt me-1"></i> Correo verificado
+                    </span>
+                {% else %}
+                    <span class="badge" style="background-color: var(--color-warning-bg); color: var(--color-warning-text); border: 1px solid var(--color-warning-border); font-size: 12px; padding: 6px 12px;">
+                        <i class="fas fa-exclamation-triangle me-1"></i> Correo no verificado
+                    </span>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- 2. Grilla de Información Detallada -->
+<div class="row g-4">
+
+    <!-- Información Personal -->
+    <div class="col-lg-6 col-12">
+        <div class="card-corporate h-100 mb-0">
+            <div class="card-corporate-body p-3 p-md-4">
+                
+                <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                    <i class="far fa-user text-primary"></i>
+                    <h6 class="fw-bold text-dark mb-0" style="font-size: 14px;">Información personal</h6>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-borderless align-middle mb-0" style="font-size: 13px;">
+                        <tbody>
+                            <tr>
+                                <td class="text-secondary ps-0 py-2" style="width: 35%;">Nombre completo</td>
+                                <td class="fw-semibold text-dark pe-0 py-2">{{ usuario.get_full_name|default:"—" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-secondary ps-0 py-2">Nombre de usuario</td>
+                                <td class="fw-semibold text-dark pe-0 py-2 font-monospace">{{ usuario.username }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-secondary ps-0 py-2">Correo electrónico</td>
+                                <td class="fw-semibold text-dark pe-0 py-2">{{ usuario.email|default:"—" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-secondary ps-0 py-2">Teléfono de contacto</td>
+                                <td class="fw-semibold text-dark pe-0 py-2">{{ perfil.telefono|default:"—" }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Información Organizacional -->
+    <div class="col-lg-6 col-12">
+        <div class="card-corporate h-100 mb-0">
+            <div class="card-corporate-body p-3 p-md-4">
+                
+                <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                    <i class="far fa-building text-primary"></i>
+                    <h6 class="fw-bold text-dark mb-0" style="font-size: 14px;">Información organizacional</h6>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-borderless align-middle mb-0" style="font-size: 13px;">
+                        <tbody>
+                            <tr>
+                                <td class="text-secondary ps-0 py-2" style="width: 35%;">Empresa</td>
+                                <td class="fw-semibold text-dark pe-0 py-2">{{ perfil.empresa.nombre_comercial|default:"—" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-secondary ps-0 py-2">Área</td>
+                                <td class="fw-semibold text-dark pe-0 py-2">{{ perfil.area.nombre|default:"—" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-secondary ps-0 py-2">Puesto asignado</td>
+                                <td class="fw-semibold text-dark pe-0 py-2">{{ perfil.puesto_fk.nombre|default:"—" }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

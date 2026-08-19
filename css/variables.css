@@ -1,0 +1,86 @@
+/* ===================================================
+   SISTEMA CORPORATIVO - DESIGN TOKENS & VARIABLES
+   =================================================== */
+
+:root {
+    /* --- Paleta Principal: Orange Scale --- */
+    --color-orange-50:  #fff5ed;
+    --color-orange-100: #ffe9d4;
+    --color-orange-200: #ffcfa8;
+    --color-orange-300: #ffad70;
+    --color-orange-400: #ff8037;
+    --color-orange-500: #ff6115; /* Color Primario Corporativo */
+    --color-orange-600: #f04206;
+    --color-orange-700: #c72f07;
+    --color-orange-800: #9e260e;
+    --color-orange-900: #7f220f;
+    --color-orange-950: #450d05;
+
+    /* --- Paleta Secundaria / Contraste: Quarter Pearl Lusta Scale --- */
+    --color-pearl-50:  #fffcf4; /* Fondo secundario cálido */
+    --color-pearl-100: #fff4d5;
+    --color-pearl-200: #fee5aa;
+    --color-pearl-300: #fdd274;
+    --color-pearl-400: #fbb33c;
+    --color-pearl-500: #f99a16;
+    --color-pearl-600: #ea7e0c;
+    --color-pearl-700: #c2600c;
+    --color-pearl-800: #9a4b12;
+    --color-pearl-900: #7c3f12;
+    --color-pearl-950: #431e07;
+
+    /* --- Neutros & Antracitas --- */
+    --color-white:       #FFFFFF;
+    --color-bg-app:      #f5f6fa;
+    --color-bg-subtle:   #f8f9fa;
+    --color-border:      #E5E7EB;
+    --color-border-dark: #D1D5DB;
+
+    --color-text-dark:      #1F2937; /* Títulos y textos con énfasis */
+    --color-text-main:      #4E4E4C; /* Texto base del sistema */
+    --color-text-secondary: #6B7280; /* Subtítulos, labels y metadatos */
+    --color-text-muted:     #9CA3AF; /* Placeholders y textos inactivos */
+
+    /* --- Estados Semánticos Suaves --- */
+    --color-success-bg:   #E6F4EA;
+    --color-success-text: #1F7A46;
+    --color-success-border: #B5E1C8;
+
+    --color-warning-bg:   #FFF4E5;
+    --color-warning-text: #9A5B00;
+    --color-warning-border: #FFD8A8;
+
+    --color-danger-bg:   #FDEAEA;
+    --color-danger-text: #A52222;
+    --color-danger-border: #F2B3B3;
+
+    --color-info-bg:   #E8F1FA;
+    --color-info-text: #1D4E89;
+    --color-info-border: #B6D4F2;
+
+    /* --- Tipografía --- */
+    --font-family-base: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --font-size-base: 13px;
+    --font-size-sm:   11px;
+    --font-size-md:   12px;
+    --font-size-title: 15px;
+
+    /* --- Layout & Dimensiones --- */
+    --sidebar-collapsed-w: 68px;
+    --sidebar-expanded-w:  250px;
+    --topbar-height:       65px;
+    --border-radius-sm:    6px;
+    --border-radius-md:    8px;
+    --border-radius-lg:    12px;
+    --border-radius-full:  9999px;
+
+    /* --- Sombras & Elevaciones Modernas --- */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+    --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-dropdown: 0 10px 25px rgba(0, 0, 0, 0.12);
+
+    /* --- Transiciones --- */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}

@@ -1,0 +1,135 @@
+/* ===================================================
+   SISTEMA CORPORATIVO - COMPONENTES & ESTADOS
+   =================================================== */
+
+/* --- 1. Tarjetas Corporativas --- */
+.card-corporate {
+    background: var(--color-white, #FFFFFF);
+    border: 1px solid var(--color-border, #E5E7EB);
+    border-radius: var(--border-radius-md, 8px);
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.05));
+    margin-bottom: 1.25rem;
+}
+
+.card-corporate-body {
+    padding: 16px;
+}
+
+/* --- 2. Íconos Circulares de Estatus --- */
+.status-icon-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: var(--font-size-base, 13px);
+    cursor: default;
+    transition: transform var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
+}
+
+.status-icon-circle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.status-icon-circle.status-success {
+    background-color: var(--color-success-bg, #E6F4EA);
+    color: var(--color-success-text, #1F7A46);
+}
+
+.status-icon-circle.status-warning {
+    background-color: var(--color-warning-bg, #FFF4E5);
+    color: var(--color-warning-text, #9A5B00);
+}
+
+.status-icon-circle.status-pending {
+    background-color: var(--color-bg-subtle, #f5f5f5);
+    color: var(--color-text-secondary, #757575);
+}
+
+.status-icon-circle.status-danger {
+    background-color: var(--color-danger-bg, #FDEAEA);
+    color: var(--color-danger-text, #A52222);
+}
+
+/* --- 3. Badges y Enlaces Micro-Interactivos --- */
+.badge-interactive {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    font-size: var(--font-size-md, 12px);
+    background-color: var(--color-orange-50, #fff5ed);
+    color: var(--color-orange-600, #f04206);
+    border: 1px solid var(--color-orange-200, #ffcfa8);
+    border-radius: var(--border-radius-sm, 6px);
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);
+}
+
+.badge-interactive:hover {
+    background-color: var(--color-orange-100, #ffe9d4);
+    color: var(--color-orange-700, #c72f07);
+}
+
+.meta-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: var(--color-bg-subtle, #f1f3f5);
+    color: var(--color-text-secondary, #495057);
+    padding: 3px 8px;
+    border-radius: var(--border-radius-sm, 6px);
+    font-size: var(--font-size-md, 12px);
+    font-weight: 500;
+}
+
+/* --- 4. Tooltips Personalizados --- */
+.tooltip-inner {
+    font-size: var(--font-size-md, 12px) !important;
+    padding: 6px 10px !important;
+    border-radius: var(--border-radius-sm, 6px) !important;
+    background-color: var(--color-text-dark, #1F2937) !important;
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+/* --- 5. Dropdowns de Acciones en Tablas --- */
+.table-actions-dropdown .dropdown-menu {
+    z-index: 1060 !important;
+    min-width: 190px;
+    border-radius: var(--border-radius-md, 8px);
+    box-shadow: var(--shadow-dropdown, 0 10px 25px rgba(0, 0, 0, 0.12)) !important;
+    border: 1px solid var(--color-border, #E5E7EB);
+}
+
+.table-actions-dropdown .dropdown-item {
+    font-size: var(--font-size-base, 13px) !important;
+    padding: 8px 14px;
+    color: var(--color-text-main, #4E4E4C);
+    transition: background-color var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);
+}
+
+.table-actions-dropdown .dropdown-item:hover {
+    background-color: var(--color-orange-50, #fff5ed);
+    color: var(--color-orange-600, #f04206);
+}
+
+/* --- 6. Visor de PDF Frame --- */
+.pdf-frame-card {
+    border-radius: var(--border-radius-md, 8px);
+    overflow: hidden;
+    background: var(--color-white, #ffffff);
+    border: 1px solid var(--color-border, #e9ecef);
+}
+
+.pdf-frame {
+    width: 100%;
+    height: calc(100vh - 230px);
+    min-height: 720px;
+    border: none;
+    display: block;
+    background: var(--color-bg-subtle, #f8f9fa);
+}
+

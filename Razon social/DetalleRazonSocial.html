@@ -1,0 +1,129 @@
+{% extends "Inicio/Base/base.html" %}
+
+{% block title %}Detalle de Razón Social | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'consultar_razones' %}">Razones Sociales</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ razon.razon_social|default:"Detalle" }}</li>
+{% endblock %}
+
+{% block page_content %}
+    <!-- 2. Contenedor de Información / Formulario Dinámico -->
+    <div class="card-corporate mb-4">
+        <div class="card-corporate-body p-4">
+            
+            <h5 class="fw-bold text-dark mb-4 pb-2 border-bottom" style="font-size: 15px;">
+                {% if modo_edicion %}
+                    <i class="fas fa-edit text-primary me-2"></i> Editar Datos Fiscales
+                {% elif modo_fiel %}
+                    <i class="fas fa-key text-primary me-2"></i> Actualizar Certificados (FIEL)
+                {% else %}
+                    <i class="fas fa-building text-primary me-2"></i> Datos de la Razón Social
+                {% endif %}
+            </h5>
+            
+            {% if modo_edicion %}
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">{{ form_razon.as_p }}</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="submit" class="btn btn-primary-custom px-4 shadow-sm">
+                            <i class="fas fa-save me-1"></i> Guardar Cambios
+                        </button>
+                        <a href="{% url 'detalle_razon' razon.pk %}" class="btn btn-outline-secondary btn-sm px-3 shadow-sm text-decoration-none">
+                            Cancelar
+                        </a>
+                    </div>
+                </form>
+
+            {% elif modo_fiel %}
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">{{ form_cert.as_p }}</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="submit" name="btn_guardar_fiel" class="btn btn-primary-custom px-4 shadow-sm">
+                            <i class="fas fa-key me-1"></i> Guardar Cambios FIEL
+                        </button>
+                        <a href="{% url 'detalle_razon' razon.pk %}" class="btn btn-outline-secondary btn-sm px-3 shadow-sm text-decoration-none">
+                            Cancelar
+                        </a>
+                    </div>
+                </form>
+
+            {% else %}
+                <!-- Vista Informativa Detallada -->
+                <div class="row g-4 mb-2">
+                    
+                    <div class="col-12 col-md-4">
+                        <div class="border-end pe-3 h-100">
+                            <div class="text-secondary fw-semibold mb-1" style="font-size: 12px;">Razón Social</div>
+                            <div class="fw-bold text-dark mb-3" style="font-size: 14px;">{{ razon.razon_social }}</div>
+                            
+                            <div class="text-secondary fw-semibold mb-1" style="font-size: 12px;">RFC</div>
+                            <div class="fw-semibold text-dark font-monospace mb-3" style="font-size: 13px;">{{ razon.rfc }}</div>
+                            
+                            <div class="text-secondary fw-semibold mb-1" style="font-size: 12px;">Buzón</div>
+                            <div class="text-dark mb-1 font-monospace" style="font-size: 13px;">{{ razon.buzon_prefijo|default:"—" }}</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <div class="border-end pe-3 h-100">
+                            <div class="text-secondary fw-semibold mb-1" style="font-size: 12px;">Calle</div>
+                            <div class="text-dark mb-3" style="font-size: 13px;">{{ razon.calle|default:"—" }}</div>
+                            
+                            <div class="text-secondary fw-semibold mb-1" style="font-size: 12px;">Núm. Exterior / Interior</div>
+                            <div class="text-dark mb-3" style="font-size: 13px;">{{ razon.num_ext }} {% if razon.num_int %}/ {{ razon.num_int }}{% endif %}</div>
+                            
+                            <div class="text-secondary fw-semibold mb-1" style="font-size: 12px;">Colonia</div>
+                            <div class="text-dark mb-1" style="font-size: 13px;">{{ razon.colonia|default:"—" }}</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <div class="h-100">
+                            <div class="text-secondary fw-semibold mb-1" style="font-size: 12px;">Localidad</div>
+                            <div class="text-dark mb-3" style="font-size: 13px;">{{ razon.localidad|default:"—" }}</div>
+                            
+                            <div class="text-secondary fw-semibold mb-1" style="font-size: 12px;">Municipio / Estado</div>
+                            <div class="text-dark mb-3" style="font-size: 13px;">{{ razon.municipio }} / {{ razon.estado }}</div>
+                            
+                            <div class="text-secondary fw-semibold mb-1" style="font-size: 12px;">C.P. / Régimen Fiscal</div>
+                            <div class="text-dark mb-1 font-monospace" style="font-size: 13px;">{{ razon.codigo_postal }} - {{ razon.regimen_fiscal_principal }}</div>
+                        </div>
+                    </div>
+
+                </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+    <!-- 3. Barra de Acciones del Modo Lectura -->
+    {% if not modo_edicion and not modo_fiel %}
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+            <a href="?fiel=1" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 shadow-sm px-3 text-decoration-none">
+                <i class="fas fa-key"></i>
+                <span>Actualizar FIEL</span>
+            </a>
+
+            <a href="?editar=1" class="btn btn-primary-custom btn-sm d-inline-flex align-items-center gap-1 shadow-sm px-3 text-decoration-none">
+                <i class="fas fa-edit"></i>
+                <span>Modificar</span>
+            </a>
+
+            <form method="post" onsubmit="return confirm('¿Está seguro de que desea desactivar esta Razón Social?');" class="d-inline mb-0">
+                {% csrf_token %}
+                <button type="submit" name="btn_desactivar" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1 shadow-sm px-3">
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Desactivar RFC</span>
+                </button>
+            </form>
+        </div>
+    {% endif %}
+
+{% endblock %}

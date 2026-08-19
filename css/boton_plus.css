@@ -1,0 +1,63 @@
+
+.btn-plus {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background-color: #DF4313;
+    color: #FFFFFF;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+    text-decoration: none;
+}
+
+.btn-plus:hover {
+    background-color: #DB6643;
+    transform: scale(1.05);
+}
+
+.btn-plus:active {
+    background-color: #DA5026;
+    transform: scale(0.98);
+}
+
+.btn-plus i {
+    font-size: 16px;
+}
+
+
+.btn-plus:visited {
+    color: #FFFFFF;
+}
+
+.btn-plus:hover {
+    color: #FFFFFF;
+}
+
+
+/* Tooltip */
+.btn-plus::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 50%;
+    right: 52px;
+    transform: translateY(50%);
+    background-color: #FFFFFF;
+    color: #4E4E4C;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.btn-plus:hover::after {
+    opacity: 1;
+}

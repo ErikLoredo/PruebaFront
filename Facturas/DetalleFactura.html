@@ -1,0 +1,713 @@
+{% extends "Inicio/Base/base.html" %}
+
+{% block title %}Detalle Factura | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'facturas' %}">Facturas</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Detalle de factura</li>
+{% endblock %}
+
+
+{% block extra_css %}
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block page_content %}
+
+    <!-- 1. Barra Superior de Acciones y Botón Regresar -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+        <!-- <div>
+            <a href="{% url 'facturas' %}" class="text-decoration-none">
+                <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 shadow-sm px-3">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Regresar</span>
+                </button>
+            </a>
+        </div> -->
+
+        <div class="btn-group shadow-sm">
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="fa fa-envelope me-1"></i> Enviar por correo
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="fa fa-copy me-1"></i> Emitir similar
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="fa fa-ban me-1"></i> Cancelar
+            </button>
+
+            {% if es_factura_manual %}
+                <a href="{% url 'eliminar_factura_manual' factura.id %}" class="btn btn-outline-danger btn-sm">
+                    <i class="fas fa-trash-alt me-1"></i> Eliminar
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 2. Cabecera de la Factura (Emisor, Receptor y Badge Fecha) -->
+    <div class="card-corporate mb-4">
+        <div class="card-corporate-body p-4">
+            <div class="row align-items-center g-3">
+                
+                <!-- Datos del Receptor y Emisor -->
+                <div class="col-12 col-md-8">
+                    <h4 class="fw-bold text-dark mb-1" style="font-size: 1.25rem;">
+                        {{ factura.nombre_receptor|default:"Receptor no especificado" }}
+                    </h4>
+                    
+                    <div class="text-secondary mb-2" style="font-size: 13px;">
+                        {% if factura.rfc_receptor %}
+                            <span class="fw-semibold">RFC:</span> <span class="font-monospace">{{ factura.rfc_receptor }}</span>
+                        {% endif %}
+                        {% if factura.domicilio_fiscal_receptor %}
+                            <span class="ms-2">| MEX {{ factura.domicilio_fiscal_receptor }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="border-top pt-2 mt-2 text-muted" style="font-size: 13px;">
+                        <span>Expedido por: </span>
+                        <strong class="text-dark">{{ factura.nombre_emisor|default:"N/A" }}</strong>
+                        {% if factura.rfc_emisor %}
+                            <span class="ms-1 font-monospace">({{ factura.rfc_emisor }})</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Bloque Calendario de Emisión -->
+                <div class="col-12 col-md-4 text-md-end text-start">
+                    <div class="card-corporate d-inline-block text-center p-2 mb-0 shadow-sm" style="min-width: 140px; background-color: var(--color-bg-subtle);">
+                        <small class="text-muted d-block fw-bold" style="font-size: 11px; letter-spacing: 0.5px;">
+                            {{ serie_folio|default:"FOLIO" }}
+                        </small>
+                        <div class="border-top border-bottom my-1 py-1 bg-white rounded-1">
+                            <span class="text-uppercase text-primary d-block fw-bold" style="font-size: 11px;">
+                                {% with mes=factura.fecha_emision|date:"m" %}
+                                    {% if mes == "01" %}ENE
+                                    {% elif mes == "02" %}FEB
+                                    {% elif mes == "03" %}MAR
+                                    {% elif mes == "04" %}ABR
+                                    {% elif mes == "05" %}MAY
+                                    {% elif mes == "06" %}JUN
+                                    {% elif mes == "07" %}JUL
+                                    {% elif mes == "08" %}AGO
+                                    {% elif mes == "09" %}SEP
+                                    {% elif mes == "10" %}OCT
+                                    {% elif mes == "11" %}NOV
+                                    {% elif mes == "12" %}DIC
+                                    {% endif %}
+                                {% endwith %}
+                            </span>
+                            <span class="fs-4 fw-bold text-dark d-block" style="line-height: 1.1;">
+                                {{ factura.fecha_emision|date:"d" }}
+                            </span>
+                            <span class="text-muted d-block" style="font-size: 11px;">
+                                {{ factura.fecha_emision|date:"Y" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Cuerpo Principal: Tabla de Conceptos y Panel Lateral de Pagos -->
+    <div class="row g-4 mb-4">
+        
+        <!-- Columna Izquierda: Tabla de Conceptos y Totales -->
+        <div class="col-12 col-lg-8 col-xl-9">
+            
+            <div class="card-corporate mb-4">
+                <div class="card-corporate-body p-0">
+                    <div class="table-responsive-custom">
+                        <table class="table table-hover align-middle mb-0" style="min-width: 700px;">
+                            <thead>
+                                <tr>
+                                    <th class="ps-3" style="width: 100px;">Cantidad</th>
+                                    <th style="width: 110px;">Unidad</th>
+                                    <th>Descripción</th>
+                                    <th class="text-end" style="width: 130px;">P. Unitario</th>
+                                    <th class="text-end pe-3" style="width: 130px;">Importe</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in productos %}
+                                <tr>
+                                    <td class="ps-3 font-monospace">{{ p.cantidad|floatformat:1 }}</td>
+                                    <td class="text-secondary">{{ p.nombre_unidad|default:"—" }}</td>
+                                    <td>
+                                        <div class="fw-semibold text-dark">{{ p.descripcion }}</div>
+                                        {% if p.n_identificacion %}
+                                            <div class="text-muted" style="font-size: 11px;">
+                                                Código: {{ p.n_identificacion }}
+                                            </div>
+                                        {% endif %}
+                                        {% if p.clave_prod %}
+                                            <div class="text-muted" style="font-size: 11px;">
+                                                Clave SAT: {{ p.nombre_producto|default:"" }} ({{ p.clave_prod }})
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end text-secondary fw-semibold">
+                                        {{ factura.simbolo_moneda|default:"$" }}{{ p.valor_unitario|floatformat:2 }}
+                                    </td>
+                                    <td class="text-end pe-3 fw-bold text-dark">
+                                        {{ factura.simbolo_moneda|default:"$" }}{{ p.importe|floatformat:2 }}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        No existen conceptos registrados para esta factura.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Liquidación y Totales Financieros -->
+            <div class="row justify-content-end">
+                <div class="col-12 col-md-6 col-lg-5">
+                    <div class="card-corporate">
+                        <div class="card-corporate-body p-3">
+                            <table class="table table-sm table-borderless mb-0" style="font-size: 13px;">
+                                <tbody>
+                                    <tr>
+                                        <td class="text-secondary ps-0">Subtotal</td>
+                                        <td class="text-end pe-0 fw-semibold text-dark">{{ factura.simbolo_moneda|default:"$" }}{{ factura.subtotal|floatformat:2 }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-secondary ps-0">IVA (16%)</td>
+                                        <td class="text-end pe-0 text-secondary">{{ factura.simbolo_moneda|default:"$" }}{{ iva_total|floatformat:2 }}</td>
+                                    </tr>
+                                    {% if retencion_total and retencion_total > 0 %}
+                                    <tr>
+                                        <td class="text-secondary ps-0">Retenido: IVA</td>
+                                        <td class="text-end pe-0 text-danger">-{{ factura.simbolo_moneda|default:"$" }}{{ retencion_total|floatformat:2 }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    <tr class="border-top">
+                                        <td class="ps-0 pt-2 fw-bold text-dark" style="font-size: 15px;">Total</td>
+                                        <td class="text-end pe-0 pt-2 fw-bold text-dark" style="font-size: 15px;">{{ factura.simbolo_moneda|default:"$" }}{{ factura.total|floatformat:2 }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Columna Derecha: Panel de Pagos y Archivos -->
+        <div class="col-12 col-lg-4 col-xl-3">
+            
+            <div class="card-corporate mb-4">
+                <div class="card-corporate-body p-3">
+                    
+                    <!-- Header de Pagos -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                        <h6 class="fw-bold text-dark mb-0" style="font-size: 13px;">
+                            <i class="fas fa-dollar-sign text-primary me-1"></i> PAGOS
+                        </h6>
+                        <button class="btn btn-sm btn-light border p-1" type="button" data-bs-toggle="modal" data-bs-target="#modalRegistroPago" title="Registrar un pago" id="btnAbrirModalDetalle">
+                            <i class="fa fa-cog text-secondary"></i>
+                        </button>
+                    </div>
+
+                    <!-- Estado Dinámico -->
+                    <div class="text-center mb-3">
+                        {% if factura.estado_dinamico == "Cobrada" or factura.estado_dinamico == "Pagada" or "Cobrada" in factura.estado_dinamico or "Pagada" in factura.estado_dinamico %}
+                            <div id="estadoFacturaDetalle" class="badge w-100 p-2" style="background-color: var(--color-success-bg); color: var(--color-success-text); border: 1px solid var(--color-success-border); font-size: 12px;">
+                                <i class="fas fa-check-circle me-1"></i> {{ factura.estado_dinamico }}
+                            </div>
+                        {% elif "Parcial" in factura.estado_dinamico %}
+                            <div id="estadoFacturaDetalle" class="badge w-100 p-2" style="background-color: var(--color-info-bg); color: var(--color-info-text); border: 1px solid var(--color-info-border); font-size: 12px;">
+                                {{ factura.estado_dinamico }}
+                            </div>
+                        {% else %}
+                            <div id="estadoFacturaDetalle" class="badge w-100 p-2" style="background-color: var(--color-warning-bg); color: var(--color-warning-text); border: 1px solid var(--color-warning-border); font-size: 12px;">
+                                {{ factura.estado_dinamico|default:"Por pagar" }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Fecha Límite -->
+                    <div class="text-secondary small mb-3 text-center">
+                        <span>Fecha límite: </span>
+                        <strong class="text-dark fecha-es">{{ factura.fecha_emision|date:"d M Y" }}</strong>
+                    </div>
+
+                    <!-- Recibos de Pago Relacionados -->
+                    {% if pagos_relacionados %}
+                        <div class="border-top pt-2 mt-2 mb-3">
+                            <h6 class="fw-semibold text-muted text-uppercase mb-2" style="font-size: 11px; letter-spacing: 0.5px;">Recibos de pago</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0" style="font-size: 12px;">
+                                    <thead>
+                                        <tr class="table-light">
+                                            <th>Fecha</th>
+                                            <th class="text-end">Monto</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for pago in pagos_relacionados %}
+                                        <tr>
+                                            <td>
+                                                <a href="{% url 'detalle_recibo_pago' pago.id %}" class="text-decoration-none text-primary fw-semibold">
+                                                    {{ pago.fecha_pago|date:"Y-m-d" }}
+                                                </a>
+                                            </td>
+                                            <td class="text-end fw-bold text-dark">${{ pago.monto|floatformat:2 }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Archivos Descargables -->
+                    <div class="border-top pt-3 mt-2">
+                        <h6 class="fw-semibold text-muted text-uppercase mb-2" style="font-size: 11px; letter-spacing: 0.5px;">Archivos</h6>
+                        
+                        <div class="d-flex flex-column gap-2">
+                            {% if not es_factura_manual %}
+                                <a href="{% url 'descargar_xml' factura.uuid %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-between p-2 shadow-sm text-decoration-none">
+                                    <span class="d-inline-flex align-items-center gap-2">
+                                        <i class="far fa-file-code text-primary"></i>
+                                        <span style="font-size: 12px;">Descargar XML</span>
+                                    </span>
+                                    <span class="badge bg-light text-dark border">XML</span>
+                                </a>
+                            {% endif %}
+
+                            <a href="{% if es_factura_manual %}{{ factura.pdf_url }}{% else %}{% url 'descargar_pdf_factura' id=factura.id %}{% endif %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-between p-2 shadow-sm text-decoration-none" download>
+                                <span class="d-inline-flex align-items-center gap-2">
+                                    <i class="far fa-file-pdf text-danger"></i>
+                                    <span style="font-size: 12px;">Descargar PDF</span>
+                                </span>
+                                <span class="badge bg-light text-dark border">PDF</span>
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- 4. Sección Condicional de Carta Porte -->
+    {% if carta_porte.id_ccp %}
+    <div class="card-corporate mb-4">
+        <div class="card-corporate-body p-4">
+            
+            <h5 class="fw-bold text-dark mb-3" style="font-size: 15px;">
+                <i class="fas fa-truck text-primary me-2"></i> Carta Porte
+            </h5>
+            
+            <!-- Datos Generales -->
+            <div class="table-responsive mb-4">
+                <table class="table table-sm table-borderless mb-0" style="font-size: 13px;">
+                    <tbody>
+                        <tr>
+                            <td style="width: 25%;" class="text-muted">Versión</td>
+                            <td class="fw-semibold text-dark">{{ carta_porte.version }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">ID de Carta Porte</td>
+                            <td class="fw-semibold text-dark font-monospace">{{ carta_porte.id_ccp }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Transporte internacional</td>
+                            <td>{{ carta_porte.transp_internac }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Entrada o salida de mercancías</td>
+                            <td>{{ carta_porte.entrada_salida|default:"—" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">País de origen o destino</td>
+                            <td>{{ carta_porte.pais_origen_destino|default:"—" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Vía de entrada o salida</td>
+                            <td>{{ carta_porte.via_entrada_salida|default:"—" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Total distancia recorrida</td>
+                            <td>{{ carta_porte.total_dist_rec|default:"—" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Régimen aduanero</td>
+                            <td>{{ carta_porte.regimen_aduanero|default:"—" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Ubicaciones -->
+            <h6 class="fw-bold text-dark mb-2" style="font-size: 14px;">Ubicaciones</h6>
+            <div class="table-responsive-custom mb-4">
+                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 12px; min-width: 900px;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tipo</th>
+                            <th>RFC</th>
+                            <th>Nombre Remitente / Destinatario</th>
+                            <th>Registro Fiscal</th>
+                            <th>Residencia</th>
+                            <th>Fecha Salida / Llegada</th>
+                            <th class="text-end">Distancia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in carta_porte.ubicaciones %}
+                        <tr>
+                            <td>{{ u.id }}</td>
+                            <td>{{ u.tipo }}</td>
+                            <td class="font-monospace">{{ u.rfc }}</td>
+                            <td>{{ u.nombre }}</td>
+                            <td>{{ u.num_id_fiscal|default:"—" }}</td>
+                            <td>{{ u.residencia_fiscal|default:"—" }}</td>
+                            <td class="fecha-es">{{ u.fecha_salida|default:"—" }}</td>
+                            <td class="text-end">{{ u.distancia|default:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Domicilio Ubicaciones -->
+            <h6 class="fw-bold text-dark mb-2" style="font-size: 14px;">Domicilio Ubicaciones</h6>
+            <div class="table-responsive-custom mb-4">
+                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 12px; min-width: 1000px;">
+                    <thead>
+                        <tr>
+                            <th>Calle</th>
+                            <th>Núm. Ext</th>
+                            <th>Núm. Int</th>
+                            <th>Colonia</th>
+                            <th>Localidad</th>
+                            <th>Referencia</th>
+                            <th>Municipio</th>
+                            <th>Estado</th>
+                            <th>País</th>
+                            <th>C.P.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in carta_porte.ubicaciones %}
+                        <tr>
+                            <td>{{ u.calle }}</td>
+                            <td>{{ u.num_ext }}</td>
+                            <td>{{ u.num_int|default:"—" }}</td>
+                            <td>{{ u.colonia }}</td>
+                            <td>{{ u.localidad|default:"—" }}</td>
+                            <td>{{ u.referencia|default:"—" }}</td>
+                            <td>{{ u.municipio }}</td>
+                            <td>{{ u.estado }}</td>
+                            <td>{{ u.pais }}</td>
+                            <td class="font-monospace">{{ u.cp }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Mercancías -->
+            <h6 class="fw-bold text-dark mb-2" style="font-size: 14px;">Mercancías</h6>
+            <div class="table-responsive-custom mb-4">
+                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 12px; min-width: 950px;">
+                    <thead>
+                        <tr>
+                            <th>Bienes</th>
+                            <th>Descripción</th>
+                            <th>Cantidad</th>
+                            <th>Clave Unidad</th>
+                            <th>Unidad</th>
+                            <th>Peligroso</th>
+                            <th>Clave Peligroso</th>
+                            <th>Embalaje</th>
+                            <th>Peso (Kg)</th>
+                            <th>Fracción Arancelaria</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{ carta_porte.bienes }}</td>
+                            <td>{{ carta_porte.desc_merc }}</td>
+                            <td>{{ carta_porte.cant_merc }}</td>
+                            <td>{{ carta_porte.c_unidad }}</td>
+                            <td>{{ carta_porte.unidad }}</td>
+                            <td>{{ carta_porte.peligroso }}</td>
+                            <td>{{ carta_porte.cve_peligroso }}</td>
+                            <td>{{ carta_porte.embalaje }}</td>
+                            <td>{{ carta_porte.peso_kg }}</td>
+                            <td>{{ carta_porte.fraccion_arancelaria|default:"—" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Remolques -->
+            {% if carta_porte.remolques %}
+            <h6 class="fw-bold text-dark mb-2" style="font-size: 14px;">Remolques</h6>
+            <div class="table-responsive-custom mb-3">
+                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 12px; max-width: 450px;">
+                    <thead>
+                        <tr>
+                            <th>Subtipo de remolque</th>
+                            <th class="text-end">Placa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in carta_porte.remolques %}
+                        <tr>
+                            <td>{{ r.subtipo }}</td>
+                            <td class="text-end font-monospace">{{ r.placa }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 5. Acordeón de Más Detalles Fiscales -->
+    <div class="mb-4">
+        <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#masDetalles" aria-expanded="false">
+            <i class="fas fa-info-circle"></i>
+            <span>Más detalles fiscales</span>
+        </button>
+
+        <div class="collapse mt-2" id="masDetalles">
+            <div class="card-corporate p-3 mb-0">
+                <div class="row g-3" style="font-size: 13px;">
+                    <div class="col-12 col-md-6">
+                        <div class="mb-2"><span class="text-secondary">Régimen:</span> <strong class="text-dark">{{ factura.regimen_desc|default:"—" }}</strong></div>
+                        <div class="mb-2"><span class="text-secondary">Folio Fiscal (UUID):</span> <strong class="text-dark font-monospace">{{ factura.uuid }}</strong></div>
+                        <div class="mb-2"><span class="text-secondary">Expedido en:</span> <strong class="text-dark">{{ factura.lugar_expedicion|default:"—" }}</strong></div>
+                        <div class="mb-2"><span class="text-secondary">Método de pago:</span> <strong class="text-dark">{{ factura.metodo_pago_desc|default:"—" }}</strong></div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="mb-2"><span class="text-secondary">Forma de pago:</span> <strong class="text-dark">{{ factura.forma_pago_desc|default:"—" }}</strong></div>
+                        <div class="mb-2"><span class="text-secondary">Condiciones de pago:</span> <strong class="text-dark">{{ factura.condiciones|default:"—" }}</strong></div>
+                        <div class="mb-2"><span class="text-secondary">Uso CFDI:</span> <strong class="text-dark">{{ factura.uso_cfdi_desc|default:"—" }}</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL DE REGISTRO DE PAGO
+         ========================================== -->
+    <div class="modal fade" id="modalRegistroPago" tabindex="-1" aria-labelledby="modalRegistroPagoLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+            <div class="modal-content shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="modalRegistroPagoLabel" style="font-size: 15px;">Registrar un pago</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body pt-2">
+                    <form id="formRegistroPago" method="POST" action="{% url 'registrar_pago_manual' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="factura_id" value="{{ factura.id }}">
+
+                        <div class="mb-3" id="seccionPagadoPor" style="display: none;">
+                            <label class="form-label">Pagado por</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="pagado_por" id="btnEmpresa" value="empresa" checked autocomplete="off">
+                                <label class="btn btn-outline-secondary btn-sm" for="btnEmpresa">La empresa</label>
+
+                                <input type="radio" class="btn-check" name="pagado_por" id="btnTercero" value="tercero" autocomplete="off">
+                                <label class="btn btn-outline-secondary btn-sm" for="btnTercero">Socio / Empleado</label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3" id="seccionPersonaReembolsar" style="display: none;">
+                            <label for="persona_reembolsar" class="form-label">Persona a reembolsar</label>
+                            <input type="text" class="form-control form-control-sm" id="persona_reembolsar" name="persona_reembolsar" placeholder="Nombre de la persona">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="cuenta_pago" class="form-label required">Cuenta de pago</label>
+                            <select class="form-select form-select-sm" id="cuenta_pago" name="cuenta_pago" required>
+                                <option value="" selected disabled>Seleccione una cuenta...</option>
+                                {% for cuenta in cuentas %}
+                                    <option value="{{ cuenta.id }}">{{ cuenta.banco_nombre }} {{ cuenta.ultimos_cuatro }}</option>
+                                {% endfor %}
+                                <option value="nuevo">--- Registrar nuevo banco ---</option>
+                            </select>
+                        </div>
+
+                        <div id="seccionNuevoBanco" style="display: none;">
+                            <div class="mb-2">
+                                <label for="nuevo_nombre_banco" class="form-label">Nombre del banco</label>
+                                <input type="text" class="form-control form-control-sm" id="nuevo_nombre_banco" name="nuevo_nombre_banco" placeholder="Ej. Banorte, BBVA...">
+                            </div>
+                            <div class="mb-3">
+                                <label for="nueva_cuenta_completa" class="form-label">Número de cuenta</label>
+                                <input type="text" class="form-control form-control-sm" id="nueva_cuenta_completa" name="nueva_cuenta_completa" placeholder="Cuenta completa">
+                            </div>
+                        </div>
+
+                        <div class="mb-2">
+                            <label for="descripcion_pago" class="form-label">Descripción del pago</label>
+                            <input type="text" class="form-control form-control-sm" id="descripcion_pago" name="descripcion_pago" placeholder="Referencia / Cheque">
+                        </div>
+
+                        <div class="mb-2">
+                            <label for="referencia_pago" class="form-label">Referencia</label>
+                            <input type="text" class="form-control form-control-sm" id="referencia_pago" name="referencia_pago">
+                        </div>
+
+                        <div class="mb-2" id="contenedorFechaLabel">
+                            <label for="fecha_pago" class="form-label" id="labelFechaTexto">Fecha de pago al proveedor</label>
+                            <input type="text" class="form-control form-control-sm" id="fecha_pago" name="fecha_pago">
+                        </div>
+
+                        <div class="mb-2" id="seccionFechaReembolso" style="display: none;">
+                            <label for="fecha_reembolso" class="form-label">Fecha de reembolso final</label>
+                            <input type="text" class="form-control form-control-sm" id="fecha_reembolso" name="fecha_reembolso">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="monto_pago" class="form-label required">Monto</label>
+                            <input type="text" class="form-control form-control-sm" id="monto_pago" name="monto_pago">
+                        </div>
+
+                    </form>
+                </div>
+
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" form="formRegistroPago" class="btn btn-primary-custom btn-sm px-4" id="btnGuardarPago">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Flatpickr JS & Spanish locale -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const btnEngrane = document.getElementById("btnAbrirModalDetalle");
+    const estadoDiv = document.getElementById("estadoFacturaDetalle");
+    
+    const seccionPagadoPor = document.getElementById("seccionPagadoPor");
+    const seccionPersonaReembolsar = document.getElementById("seccionPersonaReembolsar");
+    const seccionFechaReembolso = document.getElementById("seccionFechaReembolso");
+    const labelFechaTexto = document.getElementById("labelFechaTexto");
+    const tituloModal = document.getElementById("modalRegistroPagoLabel");
+    
+    const btnEmpresa = document.getElementById("btnEmpresa");
+    const btnTercero = document.getElementById("btnTercero");
+    const modalRegistroPago = document.getElementById('modalRegistroPago');
+
+    if (btnEngrane && estadoDiv) {
+        btnEngrane.addEventListener("click", function() {
+            const textoEstado = estadoDiv.textContent.trim().toLowerCase();
+            const esPorCobrar = textoEstado.includes("cobrar") || textoEstado.includes("cobrada");
+
+            if (esPorCobrar) {
+                tituloModal.textContent = "Registrar un cobro";
+                if (seccionPagadoPor) seccionPagadoPor.style.display = "none";
+                if (seccionPersonaReembolsar) seccionPersonaReembolsar.style.display = "none";
+                if (seccionFechaReembolso) seccionFechaReembolso.style.display = "none";
+                if (labelFechaTexto) labelFechaTexto.textContent = "Fecha de cobro";
+            } else {
+                tituloModal.textContent = "Registrar un pago";
+                if (seccionPagadoPor) seccionPagadoPor.style.display = "block";
+                if (labelFechaTexto) labelFechaTexto.textContent = "Fecha de pago al proveedor";
+                if (btnEmpresa) btnEmpresa.checked = true;
+                if (seccionPersonaReembolsar) seccionPersonaReembolsar.style.display = "none";
+                if (seccionFechaReembolso) seccionFechaReembolso.style.display = "none";
+            }
+        });
+    }
+
+    if (btnEmpresa && btnTercero) {
+        btnEmpresa.addEventListener("change", function() {
+            if (this.checked) {
+                if (seccionPersonaReembolsar) seccionPersonaReembolsar.style.display = "none";
+                if (seccionFechaReembolso) seccionFechaReembolso.style.display = "none";
+            }
+        });
+
+        btnTercero.addEventListener("change", function() {
+            if (this.checked) {
+                if (seccionPersonaReembolsar) seccionPersonaReembolsar.style.display = "block";
+                if (seccionFechaReembolso) seccionFechaReembolso.style.display = "block";
+            }
+        });
+    }
+
+    const cuentaPago = document.getElementById('cuenta_pago');
+    if (cuentaPago) {
+        cuentaPago.addEventListener('change', function() {
+            const seccionNuevo = document.getElementById('seccionNuevoBanco');
+            const inputBanco = document.getElementById('nuevo_nombre_banco');
+            const inputCuenta = document.getElementById('nueva_cuenta_completa');
+            
+            const esNuevo = (this.value === 'nuevo');
+            if (seccionNuevo) seccionNuevo.style.display = esNuevo ? 'block' : 'none';
+            if (inputBanco) esNuevo ? inputBanco.setAttribute('required', 'true') : inputBanco.removeAttribute('required');
+            if (inputCuenta) esNuevo ? inputCuenta.setAttribute('required', 'true') : inputCuenta.removeAttribute('required');
+        });
+    }
+
+    if (modalRegistroPago) {
+        flatpickr("#fecha_pago", { locale: "es", dateFormat: "d M Y", defaultDate: "today" });
+        flatpickr("#fecha_reembolso", { locale: "es", dateFormat: "d M Y", allowInput: true });
+
+        modalRegistroPago.addEventListener('hidden.bs.modal', function () {
+            var form = modalRegistroPago.querySelector('form');
+            if (form) form.reset();
+            
+            const secciones = [
+                'seccionNuevoBanco', 'seccionPagadoPor', 
+                'seccionPersonaReembolsar', 'seccionFechaReembolso'
+            ];
+            secciones.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+        });
+    }
+
+    const btnGuardarPago = document.getElementById("btnGuardarPago");
+    const formRegistroPago = document.getElementById("formRegistroPago");
+
+    if (btnGuardarPago && formRegistroPago) {
+        btnGuardarPago.addEventListener("click", function(e) {
+            const monto = document.getElementById("monto_pago").value;
+            const cuenta = document.getElementById("cuenta_pago").value;
+
+            if (!monto || !cuenta) {
+                e.preventDefault();
+                alert("Por favor, completa los campos obligatorios (Cuenta y Monto).");
+                return;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

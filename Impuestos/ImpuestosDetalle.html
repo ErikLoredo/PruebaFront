@@ -1,0 +1,141 @@
+{% extends "Inicio/Base/base.html" %}
+
+{% block title %}Impuestos | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'impuestos' %}?empresa_id={{ empresa_id }}">Impuestos</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Detalle anual {% if anio %}({{ anio }}){% endif %}</li>
+{% endblock %}
+
+{% block page_content %}
+
+    <!-- 1. Barra de Filtros Anuales y Botón Regresar -->
+    <div class="card-corporate mb-4">
+        <div class="card-corporate-body p-3">
+            <form method="get" class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-0">
+
+                <input type="hidden" name="empresa_id" value="{{ empresa_id }}">
+
+                <!-- Controles de Filtrado -->
+                <div class="d-flex flex-wrap align-items-center gap-3">
+
+                    <!-- Año -->
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label fw-bold text-secondary mb-0" style="font-size: 13px;">Año:</label>
+                        <select name="anio" class="form-select form-select-sm filter-select" style="width: 110px; min-width: 110px;" onchange="this.form.submit()">
+                            {% for a in anios %}
+                                <option value="{{ a }}" {% if anio == a %}selected{% endif %}>
+                                    {{ a }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Impuesto -->
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label fw-bold text-secondary mb-0" style="font-size: 13px;">Impuesto:</label>
+                        <select name="impuesto" class="form-select form-select-sm filter-select" style="min-width: 180px;" onchange="this.form.submit()">
+                            {% for imp in impuestos %}
+                                <option value="{{ imp.clave }}" {% if impuesto == imp.clave %}selected{% endif %}>
+                                    {{ imp.descripcion }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Periodicidad (Listbox con opción Mensual) -->
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label fw-bold text-secondary mb-0" style="font-size: 13px;">Periodicidad:</label>
+                        <select name="periodicidad" class="form-select form-select-sm filter-select" style="width: 140px; min-width: 140px;" onchange="this.form.submit()">
+                            <option value="M" selected>Mensual</option>
+                        </select>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. Tabla Matriz con Primera Columna Sticky -->
+    <div class="card-corporate mb-4">
+        <div class="card-corporate-body p-0">
+            <div class="table-responsive-custom">
+                <table class="table table-hover align-middle mb-0" style="min-width: 1200px;">
+
+                    <thead>
+                        <tr style="height: 52px;">
+                            <th class="ps-3 table-sticky-col" style="min-width: 280px; max-width: 320px;">
+                                <i class="fas fa-list-alt text-muted me-1"></i> Desglose de impuesto
+                            </th>
+
+                            {% for p in periodos %}
+                                <th class="text-center text-dark fw-bold px-3" style="min-width: 110px;">
+                                    {{ p.label }}
+                                </th>
+                            {% empty %}
+                                <th class="text-center text-muted px-3">Sin períodos</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for r in filas %}
+                            <tr class="{% if r.orden == 4 or r.orden == 8 or r.orden == 12 or r.orden == 13 %}row-subtotal{% endif %}">
+                                <!-- Desglose Columna Sticky -->
+                                <td class="ps-3 table-sticky-col {% if r.orden == 4 or r.orden == 8 or r.orden == 12 or r.orden == 13 %}fw-bold text-dark{% else %}fw-semibold text-secondary{% endif %}">
+                                    {{ r.impuesto_desglose }}
+                                </td>
+
+                                <!-- Celdas de Períodos -->
+                                {% for celda in r.celdas %}
+                                    <td class="text-center px-3 {% if celda.importe and celda.importe < 0 %}text-primary fw-semibold{% elif r.orden == 4 or r.orden == 8 or r.orden == 12 or r.orden == 13 %}text-dark fw-bold{% else %}text-secondary{% endif %}">
+                                        {{ celda.importe_fmt }}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="20" class="text-center text-muted py-5">
+                                    <div class="d-flex flex-column align-items-center justify-content-center gap-2">
+                                        <i class="fas fa-folder-open fa-2x text-secondary opacity-50"></i>
+                                        <span>No existe desglose para los filtros seleccionados.</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+
+                        <!-- Fila de Declaraciones Asociadas -->
+                        {% if periodos %}
+                            <tr class="bg-light border-top">
+                                <td class="ps-3 table-sticky-col fw-bold text-dark" style="background-color: var(--color-bg-subtle);">
+                                    <i class="fas fa-receipt text-muted me-1"></i> Declaración
+                                </td>
+
+                                {% for p in periodos %}
+                                    <td class="text-center px-2 py-2">
+                                        {% if p.declaraciones %}
+                                            {% for dec in p.declaraciones %}
+                                                <div class="my-1">
+                                                    <a href="{% url 'detalle_declaracion' declaracion_id=dec.id %}" 
+                                                       class="badge-interactive" 
+                                                       title="Ver declaración {{ dec.numero_corto }}"
+                                                       onclick="activarSpinnerLink(this)">
+                                                        <span>{{ dec.numero_corto }}</span>
+                                                    </a>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endif %}
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

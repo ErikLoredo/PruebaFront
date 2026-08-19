@@ -1,0 +1,206 @@
+{% extends "Inicio/Base/base.html" %}
+
+{% block title %}Recibo de Pago | Sistema Corporativo{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'recibos-pago' %}">Recibos de pago</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'recibo_simplificado' pago_cfdi.id %}?from_factura={{ factura_origen_id }}">{{ serie_folio|default:"Recibo" }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ detalle_pago.fecha_pago|date:"Y-m-d" }}</li>
+{% endblock %}
+
+{% block page_content %}
+
+    <!-- 1. Barra de Acción Superior -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <!-- <div>
+            <a href="{% url 'recibo_simplificado' pago_cfdi.id %}?from_factura={{ factura_origen_id }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 shadow-sm px-3 text-decoration-none">
+                <i class="fas fa-arrow-left"></i>
+                <span>Regresar al recibo</span>
+            </a>
+        </div> -->
+        <div>
+            <button type="button" class="btn btn-sm btn-outline-secondary shadow-sm">
+                <i class="fa fa-envelope me-1"></i> Enviar por correo
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. Cabecera del Emisor y Calendario -->
+    <div class="card-corporate mb-4">
+        <div class="card-corporate-body p-4">
+            <div class="row align-items-center g-3">
+                <div class="col-12 col-md-8">
+                    <h4 class="fw-bold text-dark mb-1" style="font-size: 1.25rem;">
+                        {{ pago_cfdi.emisor_nombre|default:"Emisor no especificado" }}
+                    </h4>
+                    <div class="text-secondary" style="font-size: 13px;">
+                        Detalle del pago aplicado
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4 text-md-end text-start">
+                    <div class="card-corporate d-inline-block text-center p-2 mb-0 shadow-sm" style="min-width: 140px; background-color: var(--color-bg-subtle);">
+                        <small class="text-muted d-block fw-bold" style="font-size: 11px; letter-spacing: 0.5px;">
+                            {{ serie_folio|default:"PAGO" }}
+                        </small>
+                        <div class="border-top border-bottom my-1 py-1 bg-white rounded-1">
+                            <span class="text-uppercase text-primary d-block fw-bold" style="font-size: 11px;">
+                                {% with mes=detalle_pago.fecha_pago|date:"m" %}
+                                    {% if mes == "01" %}ENE
+                                    {% elif mes == "02" %}FEB
+                                    {% elif mes == "03" %}MAR
+                                    {% elif mes == "04" %}ABR
+                                    {% elif mes == "05" %}MAY
+                                    {% elif mes == "06" %}JUN
+                                    {% elif mes == "07" %}JUL
+                                    {% elif mes == "08" %}AGO
+                                    {% elif mes == "09" %}SEP
+                                    {% elif mes == "10" %}OCT
+                                    {% elif mes == "11" %}NOV
+                                    {% elif mes == "12" %}DIC
+                                    {% else %}{{ mes }}{% endif %}
+                                {% endwith %}
+                            </span>
+                            <span class="fs-4 fw-bold text-dark d-block" style="line-height: 1.1;">
+                                {{ detalle_pago.fecha_pago|date:"d" }}
+                            </span>
+                            <span class="text-muted d-block" style="font-size: 11px;">
+                                {{ detalle_pago.fecha_pago|date:"Y" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Estructura de 2 Columnas (Detalles y Facturas a la izquierda, Archivos y Botón a la derecha) -->
+    <div class="row g-4 mb-4">
+        
+        <!-- Columna Izquierda: Detalle del Pago y Tabla de Facturas Pagadas -->
+        <div class="col-12 col-lg-8 col-xl-9">
+            
+            <!-- Tabla de Datos del Pago Original -->
+            <h5 class="fw-bold text-dark mb-3" style="font-size: 15px;">Detalle del pago</h5>
+            <div class="card-corporate mb-4">
+                <div class="card-corporate-body p-3">
+                    <table class="table table-borderless align-middle mb-0" style="font-size: 13px;">
+                        <tbody>
+                            <tr class="border-bottom">
+                                <td class="text-secondary ps-0 py-2" style="width: 30%;">Monto</td>
+                                <td class="fw-semibold text-dark pe-0 py-2">${{ detalle_pago.monto|floatformat:2 }}</td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="text-secondary ps-0 py-2">Monto MXN</td>
+                                <td class="fw-semibold text-dark pe-0 py-2 font-monospace">${{ detalle_pago.monto|floatformat:2 }}</td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="text-secondary ps-0 py-2">Forma de pago</td>
+                                <td class="pe-0 py-2">{{ detalle_pago.forma_pago|default:"—" }}</td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="text-secondary ps-0 py-2">Núm. operación</td>
+                                <td class="pe-0 py-2 font-monospace">{{ detalle_pago.num_operacion|default:"—" }}</td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="text-secondary ps-0 py-2">Cuenta origen</td>
+                                <td class="pe-0 py-2 font-monospace">{{ detalle_pago.cta_ordenante|default:"—" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-secondary ps-0 py-2">Cuenta destino</td>
+                                <td class="pe-0 py-2 font-monospace">{{ detalle_pago.cta_beneficiario|default:"—" }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tabla de Facturas Pagadas Original con formato exacto -->
+            <h5 class="fw-bold text-dark mb-3" style="font-size: 15px;">Detalle de facturas pagadas</h5>
+            <div class="card-corporate mb-0">
+                <div class="card-corporate-body p-0">
+                    <div class="table-responsive-custom">
+                        <table class="table table-hover align-middle mb-0" style="min-width: 750px;">
+                            <thead>
+                                <tr>
+                                    <th class="ps-3">UUID</th>
+                                    <th>Emitida</th>
+                                    <th>Serie/Folio</th>
+                                    <th>Pagado</th>
+                                    <th>Restante</th>
+                                    <th class="text-end pe-3">Monto en MXN</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for f in facturas_relacionadas %}
+                                <tr>
+                                    <td class="ps-3 font-monospace">
+                                        <a href="#" class="text-decoration-none text-primary fw-semibold">{{ f.uuid }}</a>
+                                    </td>
+                                    <td class="text-muted fecha-es">
+                                        {% if "Jan" in f.emitida %}{{ f.emitida|cut:"Jan" }} Ene
+                                        {% elif "Feb" in f.emitida %}{{ f.emitida|cut:"Feb" }} Feb
+                                        {% elif "Mar" in f.emitida %}{{ f.emitida|cut:"Mar" }} Mar
+                                        {% elif "Apr" in f.emitida %}{{ f.emitida|cut:"Apr" }} Abr
+                                        {% elif "May" in f.emitida %}{{ f.emitida|cut:"May" }} May
+                                        {% elif "Jun" in f.emitida %}{{ f.emitida|cut:"Jun" }} Jun
+                                        {% elif "Jul" in f.emitida %}{{ f.emitida|cut:"Jul" }} Jul
+                                        {% elif "Aug" in f.emitida %}{{ f.emitida|cut:"Aug" }} Ago
+                                        {% elif "Sep" in f.emitida %}{{ f.emitida|cut:"Sep" }} Sep
+                                        {% elif "Oct" in f.emitida %}{{ f.emitida|cut:"Oct" }} Oct
+                                        {% elif "Nov" in f.emitida %}{{ f.emitida|cut:"Nov" }} Nov
+                                        {% elif "Dec" in f.emitida %}{{ f.emitida|cut:"Dec" }} Dic
+                                        {% else %}{{ f.emitida }}{% endif %}
+                                    </td>
+                                    <td class="font-monospace text-secondary">{{ f.serie_folio|default:"—" }}</td>
+                                    <td class="text-success fw-semibold">${{ f.pagado|floatformat:2 }}</td>
+                                    <td class="text-secondary">${{ f.restante|floatformat:2 }}</td>
+                                    <td class="text-end pe-3 fw-bold text-dark">${{ f.total_mxn|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        No existen facturas relacionadas.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="border-top">
+                                <tr class="fw-bold row-subtotal">
+                                    <td colspan="5" class="ps-3 text-end">Total:</td>
+                                    <td class="text-end pe-3 font-monospace text-dark">${{ detalle_pago.monto|floatformat:2 }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Columna Derecha: Archivos y Botón Inferior -->
+        <div class="col-12 col-lg-4 col-xl-3">
+            <div class="card-corporate mb-4">
+                <div class="card-corporate-body p-3">
+                    <h6 class="fw-bold text-muted text-uppercase mb-2" style="font-size: 11px; letter-spacing: 0.5px;">Archivos</h6>
+                    <hr class="mt-1 mb-3">
+
+                    <div class="text-center mb-3">
+                        <small class="text-muted text-truncate d-block font-monospace" style="font-size: 11px;" title="{{ pago_cfdi.uuid }}.xml">
+                            {{ pago_cfdi.uuid }}.xml
+                        </small>
+                    </div>
+
+                    <div class="list-group">
+                        <a href="{% url 'descargar_xml' pago_cfdi.uuid %}" class="btn btn-sm btn-outline-danger w-100 d-inline-flex align-items-center justify-content-center gap-2 shadow-sm text-decoration-none">
+                            <i class="far fa-file-code"></i>
+                            <span>Descargar XML</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+{% endblock %}

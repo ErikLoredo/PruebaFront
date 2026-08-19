@@ -1,0 +1,58 @@
+/* ===================================================
+   Scrollbar Global Corporativo
+   =================================================== */
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-orange-300, #ffad70) transparent;
+}
+
+/* WebKit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    background-color: transparent;
+}
+
+::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+::-webkit-scrollbar-track:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+    border-radius: var(--border-radius-full, 9999px);
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.18);
+    border-radius: var(--border-radius-full, 9999px);
+    transition: background-color var(--transition-fast, 0.15s ease);
+}
+
+*:hover::-webkit-scrollbar-thumb {
+    background-color: var(--color-orange-300, rgba(255, 97, 21, 0.45));
+}
+
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+    background-color: var(--color-orange-500, #ff6115);
+}
+
+::-webkit-scrollbar-corner {
+    background-color: transparent;
+}
+
+/* Clases utilitarias */
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.scrollbar-sm::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}

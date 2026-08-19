@@ -1,0 +1,19 @@
+{% extends "Inicio/Base/base.html" %}
+
+{% block title %}Inicio | Sistema Corporativo{% endblock %}
+
+{% block page_content %}
+
+<div class="text-center py-5" style="color:#4E4E4C;">
+
+    <h3 style="font-weight:600;">
+        Bienvenida/o, {{ request.user.get_full_name|default:request.user.username }}
+    </h3>
+
+    <p class="mt-2" style="font-size:0.95rem; color:#6B7280;">
+        Este es tu panel principal. Desde aquí puedes acceder a los módulos del sistema.
+    </p> 
+    
+</div>
+
+{% endblock %}
